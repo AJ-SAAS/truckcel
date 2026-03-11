@@ -1,0 +1,30 @@
+"use client"; // Must be a client component
+
+import { useEffect, useRef } from "react";
+import mapboxgl from "mapbox-gl";
+import "mapbox-gl/dist/mapbox-gl.css";
+
+// Use your Mapbox token directly (no process.env assignment inline)
+mapboxgl.accessToken =
+  "REDACTED_MAPBOX_TOKEN";
+
+export default function Map() {
+  const mapContainer = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!mapContainer.current) return;
+
+    const map = new mapboxgl.Map({
+      container: mapContainer.current,
+      style: "mapbox://styles/mapbox/streets-v12",
+      center: [0, 0],
+      zoom: 2,
+    });
+
+    map.addControl(new mapboxgl.NavigationControl());
+
+    return () => map.remove();
+  }, []);
+
+  return <div ref={mapContainer} className="w-full h-[500px] rounded-lg shadow-md" />;
+}

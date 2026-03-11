@@ -1,0 +1,20 @@
+"use client"; // Must be a client component
+
+import { useEffect, useState } from "react";
+import { auth } from "../lib/firebase";
+
+export default function Header() {
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((u) => setUser(u));
+    return () => unsubscribe();
+  }, []);
+
+  return (
+    <header className="p-4 bg-blue-600 text-white flex justify-between w-full">
+      <h1 className="font-bold text-xl">Truckcel MVP</h1>
+      {user ? <span>Welcome, {user.email}</span> : <span>Not logged in</span>}
+    </header>
+  );
+}
