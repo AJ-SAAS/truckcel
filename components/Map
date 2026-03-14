@@ -1,12 +1,11 @@
-"use client"; // Must be a client component
+"use client";
 
 import { useEffect, useRef } from "react";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 
-// Use your Mapbox token directly (no process.env assignment inline)
-mapboxgl.accessToken =
-  "REDACTED_MAPBOX_TOKEN";
+// Load token from environment variable
+mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || "";
 
 export default function Map() {
   const mapContainer = useRef<HTMLDivElement>(null);
@@ -26,5 +25,10 @@ export default function Map() {
     return () => map.remove();
   }, []);
 
-  return <div ref={mapContainer} className="w-full h-[500px] rounded-lg shadow-md" />;
+  return (
+    <div
+      ref={mapContainer}
+      className="w-full h-[500px] rounded-lg shadow-md"
+    />
+  );
 }
