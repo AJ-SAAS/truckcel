@@ -1,70 +1,51 @@
-// app/register/page.tsx
+// app/login/page.tsx
 "use client";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { createUserWithEmailAndPassword } from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 
-export default function RegisterPage() {
+export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState<"driver" | "shipper" | "">("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   const router = useRouter();
 
-  const handleSignUp = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!role) {
-      setError("Please choose if you are a driver or shipper");
-      return;
-    }
-
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters");
-      return;
-    }
-
     setLoading(true);
     setError("");
 
     try {
-      // Create user in Firebase Auth
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // Save role + basic info in Firestore
-      await setDoc(doc(db, "users", user.uid), {
-        email: user.email,
-        role,
-        createdAt: new Date().toISOString(),
-        // You can add more fields later: name, phone, etc.
-      });
+      // Fetch role from Firestore
+      const userDoc = await getDoc(doc(db, "users", user.uid));
+      const role = userDoc.exists() ? userDoc.data()?.role : null;
 
-      alert("Account created! Welcome to Truckcel 🎉");
+      alert("Logged in successfully! 🎉");
 
       // Redirect based on role
       if (role === "driver") {
         router.push("/onboarding/driver");
       } else if (role === "shipper") {
-        router.push("/post-load"); // or "/" for now if post-load not ready
+        router.push("/"); // temporary — change to /post-load or /search later
       } else {
         router.push("/");
       }
     } catch (err: any) {
-      console.error("Sign-up error:", err);
-      if (err.code === "auth/email-already-in-use") {
-        setError("This email is already registered");
-      } else if (err.code === "auth/invalid-email") {
-        setError("Please enter a valid email");
-      } else if (err.code === "auth/weak-password") {
-        setError("Password is too weak — use at least 6 characters");
+      console.error("Login error:", err);
+      if (err.code === "auth/invalid-credential" || err.code === "auth/user-not-found") {
+        setError("Incorrect email or password");
+      } else if (err.code === "auth/too-many-requests") {
+        setError("Too many attempts — try again later");
       } else {
-        setError(err.message || "Something went wrong. Try again.");
+        setError(err.message || "Login failed. Please try again.");
       }
     } finally {
       setLoading(false);
@@ -87,14 +68,14 @@ export default function RegisterPage() {
         marginBottom: "8px",
         textAlign: "center",
       }}>
-        Join Truckcel
+        Welcome back
       </h1>
       <p style={{
         color: "#64748b",
         textAlign: "center",
         marginBottom: "32px",
       }}>
-        Start earning or shipping smarter today
+        Log in to your Truckcel account
       </p>
 
       {error && (
@@ -110,7 +91,7 @@ export default function RegisterPage() {
         </p>
       )}
 
-      <form onSubmit={handleSignUp}>
+      <form onSubmit={handleLogin}>
         <div style={{ marginBottom: "20px" }}>
           <label style={{ display: "block", marginBottom: "6px", fontWeight: 600 }}>Email</label>
           <input
@@ -129,15 +110,14 @@ export default function RegisterPage() {
           />
         </div>
 
-        <div style={{ marginBottom: "20px" }}>
+        <div style={{ marginBottom: "32px" }}>
           <label style={{ display: "block", marginBottom: "6px", fontWeight: 600 }}>Password</label>
           <input
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-            minLength={6}
-            placeholder="At least 6 characters"
+            placeholder="Your password"
             style={{
               width: "100%",
               padding: "12px",
@@ -146,34 +126,6 @@ export default function RegisterPage() {
               fontSize: "16px",
             }}
           />
-        </div>
-
-        <div style={{ marginBottom: "32px" }}>
-          <label style={{ display: "block", marginBottom: "8px", fontWeight: 600 }}>I am a...</label>
-          <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-            <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer" }}>
-              <input
-                type="radio"
-                name="role"
-                value="driver"
-                checked={role === "driver"}
-                onChange={() => setRole("driver")}
-                style={{ accentColor: "#1d4ed8" }}
-              />
-              Driver / Truck owner
-            </label>
-            <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer" }}>
-              <input
-                type="radio"
-                name="role"
-                value="shipper"
-                checked={role === "shipper"}
-                onChange={() => setRole("shipper")}
-                style={{ accentColor: "#1d4ed8" }}
-              />
-              Shipper / Company
-            </label>
-          </div>
         </div>
 
         <button
@@ -192,14 +144,14 @@ export default function RegisterPage() {
             transition: "background 0.2s",
           }}
         >
-          {loading ? "Creating account..." : "Create account"}
+          {loading ? "Logging in..." : "Log in"}
         </button>
       </form>
 
       <p style={{ marginTop: "24px", textAlign: "center", color: "#64748b" }}>
-        Already have an account?{" "}
-        <a href="/login" style={{ color: "#1d4ed8", fontWeight: 600 }}>
-          Log in
+        Don't have an account?{" "}
+        <a href="/register" style={{ color: "#1d4ed8", fontWeight: 600 }}>
+          Sign up
         </a>
       </p>
     </div>

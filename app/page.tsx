@@ -2,7 +2,6 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import Header from "@/components/Header";
 
 // ─── ALL CONSTANTS FROM CLAUDE ──────────────────────────────────────────────
 const NAV_LINKS = ["How It Works", "For Drivers", "For Shippers", "Pricing"];
@@ -211,7 +210,6 @@ export default function Home() {
 
   return (
     <>
-      <Header />
 
       <div style={{ fontFamily: "'Syne', 'Segoe UI', sans-serif", background: "#f8fafc", color: "#0f172a", overflowX: "hidden" }}>
         <style>{`
