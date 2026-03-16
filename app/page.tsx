@@ -186,8 +186,8 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState("driver");
   const [searchFrom, setSearchFrom] = useState("");
   const [searchTo, setSearchTo] = useState("");
-  const [visibleSections, setVisibleSections] = useState({});
-  const sectionRefs = useRef({});
+  const [visibleSections, setVisibleSections] = useState<Record<string, boolean>>({});
+  const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -200,7 +200,7 @@ export default function Home() {
     return () => observer.disconnect();
   }, []);
 
-  const registerRef = (id: string) => (el: any) => { sectionRefs.current[id] = el; };
+  const registerRef = (id: string) => (el: HTMLElement | null) => { sectionRefs.current[id] = el; };
 
   const fadeIn = (id: string, delay = 0) => ({
     opacity: visibleSections[id] ? 1 : 0,
@@ -289,10 +289,10 @@ export default function Home() {
             <div style={{
               background: "white", boxShadow: "0 4px 30px rgba(0,0,0,0.08)",
               borderRadius: 14, padding: "6px 6px 6px 24px",
-              display: "flex", alignItems: "center", gap: 0,
+              display: "flex", alignItems: "center",
               border: "1px solid #e2e8f0",
               transform: "translateY(-28px)",
-              flexWrap: "wrap", gap: 1
+              flexWrap: "wrap"
             }}>
               <div style={{ display: "flex", gap: 4, marginRight: 16 }}>
                 {["driver", "shipper"].map(t => (
