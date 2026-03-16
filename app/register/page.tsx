@@ -42,7 +42,6 @@ export default function RegisterPage() {
         email: user.email,
         role,
         createdAt: new Date().toISOString(),
-        // You can add more fields later: name, phone, etc.
       });
 
       alert("Account created! Welcome to Truckcel 🎉");
@@ -51,7 +50,7 @@ export default function RegisterPage() {
       if (role === "driver") {
         router.push("/onboarding/driver");
       } else if (role === "shipper") {
-        router.push("/post-load"); // or "/" for now if post-load not ready
+        router.push("/"); // Change to /post-load once you create it
       } else {
         router.push("/");
       }
@@ -60,11 +59,11 @@ export default function RegisterPage() {
       if (err.code === "auth/email-already-in-use") {
         setError("This email is already registered");
       } else if (err.code === "auth/invalid-email") {
-        setError("Please enter a valid email");
+        setError("Please enter a valid email address");
       } else if (err.code === "auth/weak-password") {
         setError("Password is too weak — use at least 6 characters");
       } else {
-        setError(err.message || "Something went wrong. Try again.");
+        setError(err.message || "Something went wrong. Please try again.");
       }
     } finally {
       setLoading(false);
