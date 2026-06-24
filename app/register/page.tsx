@@ -33,11 +33,10 @@ export default function RegisterPage() {
     setError("");
 
     try {
-      // Create user in Firebase Auth
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // Save role + basic info in Firestore
+      // Save user data in Firestore
       await setDoc(doc(db, "users", user.uid), {
         email: user.email,
         role,
@@ -46,13 +45,11 @@ export default function RegisterPage() {
 
       alert("Account created! Welcome to Truckcel 🎉");
 
-      // Redirect based on role
+      // ✅ Fixed Redirect Logic
       if (role === "driver") {
-        router.push("/onboarding/driver");
-      } else if (role === "shipper") {
-        router.push("/"); // Change to /post-load once you create it
+        router.push("/onboarding/driver");   // or /dashboard if you don't have onboarding yet
       } else {
-        router.push("/");
+        router.push("/dashboard");           // Shipper goes straight to dashboard
       }
     } catch (err: any) {
       console.error("Sign-up error:", err);
@@ -188,7 +185,6 @@ export default function RegisterPage() {
             fontSize: "16px",
             fontWeight: 600,
             cursor: loading ? "not-allowed" : "pointer",
-            transition: "background 0.2s",
           }}
         >
           {loading ? "Creating account..." : "Create account"}
