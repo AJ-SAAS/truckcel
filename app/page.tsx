@@ -107,6 +107,7 @@ function RouteMap() {
       </svg>
 
       <svg viewBox="0 0 480 440" style={{ width: "100%", height: "100%", position: "absolute" }}>
+        {/* Route lines */}
         {routes.map((r, i) => {
           const len = Math.hypot(r.to[0] - r.from[0], r.to[1] - r.from[1]);
           const dashLen = (progress / 100) * len;
@@ -125,15 +126,17 @@ function RouteMap() {
           );
         })}
 
+        {/* Cities */}
         {cities.map(city => (
           <g key={city.id}>
             <circle cx={city.x} cy={city.y} r={5} fill="#1e40af" stroke="#60a5fa" strokeWidth={1.5} />
             <circle cx={city.x} cy={city.y} r={9} fill="#3b82f6" fillOpacity={0.15} />
             <text x={city.x + 10} y={city.y + 4} fill="#93c5fd" fontSize={9}
-              fontFamily="'Syne', sans-serif" fontWeight="600">{city.label}</text>
+              fontFamily="var(--font-display)" fontWeight="600">{city.label}</text>
           </g>
         ))}
 
+        {/* Moving truck dots */}
         {routes.filter(r => r.active).map((r, i) => {
           const t = ((progress + i * 40) % 100) / 100;
           const cx = r.from[0] + (r.to[0] - r.from[0]) * t;
@@ -155,7 +158,7 @@ function RouteMap() {
         border: "1px solid rgba(59,130,246,0.3)",
         borderRadius: 8, padding: "10px 14px"
       }}>
-        <div style={{ fontSize: 10, color: "#60a5fa", fontFamily: "'Syne', sans-serif", letterSpacing: 1, marginBottom: 6 }}>LIVE ROUTES</div>
+        <div style={{ fontSize: 10, color: "#60a5fa", fontFamily: "var(--font-display)", letterSpacing: 1, marginBottom: 6 }}>LIVE ROUTES</div>
         {["Riga → Berlin", "Tallinn → Hamburg"].map((r, i) => (
           <div key={i} style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
             <div style={{ width: 20, height: 2, background: i === 0 ? "#3b82f6" : "#06b6d4", borderRadius: 1 }} />
@@ -172,7 +175,7 @@ function RouteMap() {
         display: "flex", alignItems: "center", gap: 6
       }}>
         <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#10b981", animation: "pulse2 2s infinite" }} />
-        <span style={{ fontSize: 10, color: "#6ee7b7", fontFamily: "'Syne', sans-serif", letterSpacing: 1 }}>LIVE TRACKING</span>
+        <span style={{ fontSize: 10, color: "#6ee7b7", fontFamily: "var(--font-display)", letterSpacing: 1 }}>LIVE TRACKING</span>
       </div>
     </div>
   );
@@ -207,84 +210,325 @@ export default function Home() {
 
   return (
     <>
-      <div style={{ 
-        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
-        background: "#f8fafc", 
-        color: "#0f172a", 
-        overflowX: "hidden" 
-      }}>
+      <div style={{ fontFamily: "var(--font-body)", background: "#f8fafc", color: "#0f172a", overflowX: "hidden" }}>
         <style>{`
+          :root {
+            --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            --font-body: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+          }
+
           *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
           ::-webkit-scrollbar { width: 5px; }
           ::-webkit-scrollbar-thumb { background: #3b82f6; border-radius: 10px; }
 
           @keyframes pulse2 { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.5); opacity: 0.5; } }
           @keyframes heroFadeUp { from { opacity: 0; transform: translateY(40px); } to { opacity: 1; transform: translateY(0); } }
+          @keyframes float { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-8px); } }
           @keyframes slideInRight { from { opacity: 0; transform: translateX(30px); } to { opacity: 1; transform: translateX(0); } }
+
+          /* ─── RESPONSIVE OVERRIDES ─────────────────────────────────────── */
+          @media (max-width: 900px) {
+            .ftl-hero-section { padding: 64px 20px 56px !important; }
+            .ftl-hero-grid { grid-template-columns: 1fr !important; gap: 40px !important; }
+            .ftl-hero-copy { max-width: 100% !important; }
+
+            .ftl-search-section { padding: 0 16px !important; }
+            .ftl-search-card {
+              flex-direction: column !important;
+              align-items: stretch !important;
+              padding: 16px !important;
+              transform: translateY(-20px) !important;
+              gap: 12px !important;
+            }
+            .ftl-search-tabs { margin-right: 0 !important; }
+            .ftl-search-divider { display: none !important; }
+            .ftl-search-fields {
+              grid-template-columns: 1fr 1fr !important;
+              gap: 8px !important;
+            }
+            .ftl-search-field { border-right: none !important; padding: 8px 10px !important; }
+            .ftl-search-btn { width: 100% !important; }
+
+            .ftl-routes-section { padding: 16px 16px 56px !important; }
+            .ftl-routes-wrapper { overflow-x: auto !important; -webkit-overflow-scrolling: touch !important; }
+            .ftl-routes-grid { grid-template-columns: 160px 130px 90px 100px 120px !important; min-width: 620px !important; }
+
+            .ftl-pains-section { padding: 56px 20px !important; }
+            .ftl-pains-grid { grid-template-columns: 1fr !important; gap: 28px !important; }
+
+            .ftl-footer-grid { grid-template-columns: 1fr 1fr !important; gap: 32px !important; }
+          }
+
+          @media (max-width: 520px) {
+            .ftl-hero-stats { gap: 20px !important; }
+            .ftl-hero-btns button { width: 100% !important; justify-content: center !important; }
+            .ftl-search-fields { grid-template-columns: 1fr !important; }
+            .ftl-footer-grid { grid-template-columns: 1fr !important; }
+          }
+
+          /* ─── BUTTONS ─────────────────────────────────────────────────── */
+          .btn-primary {
+            font-family: var(--font-display);
+            background: linear-gradient(135deg, #3b82f6, #22d3ee);
+            color: #0b1120;
+            font-weight: 700;
+            border: none;
+            border-radius: 10px;
+            padding: 15px 32px;
+            font-size: 16px;
+            cursor: pointer;
+            box-shadow: 0 8px 24px rgba(59,130,246,0.35);
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+          }
+          .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 12px 30px rgba(59,130,246,0.45); }
+          .btn-primary:active { transform: translateY(0); }
+
+          .btn-ghost {
+            font-family: var(--font-display);
+            background: rgba(255,255,255,0.06);
+            color: #ffffff;
+            font-weight: 600;
+            border: 1.5px solid rgba(255,255,255,0.28);
+            border-radius: 10px;
+            padding: 15px 32px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.15s ease, border-color 0.15s ease;
+          }
+          .btn-ghost:hover { background: rgba(255,255,255,0.12); border-color: rgba(255,255,255,0.45); }
         `}</style>
 
-        {/* HERO with new logo and clean font */}
-        <section style={{
+        {/* ─── HERO with FTL Cargo Logo (you can also import Header component here) ─── */}
+        <section className="ftl-hero-section" style={{
           background: "linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #0c4a6e 100%)",
-          padding: "90px 16px 70px",
+          padding: "100px 24px 80px",
           position: "relative",
           overflow: "hidden"
         }}>
-          <div style={{ maxWidth: 1160, margin: "0 auto", position: "relative", display: "grid", gridTemplateColumns: "1fr", md: "1fr 1fr", gap: 40, alignItems: "center" }}>
-            <div style={{ animation: "heroFadeUp 0.8s ease both", textAlign: { base: "center", md: "left" } }}>
-              <img src="/ftl-cargo-logo.png" alt="FTL Cargo" style={{ height: 52, width: "auto", marginBottom: 24 }} />
+          <div style={{ position: "absolute", inset: 0, backgroundImage: "radial-gradient(circle at 70% 40%, rgba(59,130,246,0.15) 0%, transparent 60%), radial-gradient(circle at 20% 80%, rgba(6,182,212,0.1) 0%, transparent 50%)" }} />
+          <div className="ftl-hero-grid" style={{ maxWidth: 1160, margin: "0 auto", position: "relative", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 60, alignItems: "center" }}>
+            <div className="ftl-hero-copy" style={{ animation: "heroFadeUp 0.8s ease both" }}>
+              <div style={{
+                display: "inline-flex", alignItems: "center", gap: 8,
+                background: "rgba(59,130,246,0.15)", border: "1px solid rgba(59,130,246,0.4)",
+                borderRadius: 20, padding: "6px 14px", marginBottom: 24
+              }}>
+                <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#34d399", animation: "pulse2 2s infinite" }} />
+                <span style={{ fontSize: 12, color: "#93c5fd", fontWeight: 600, letterSpacing: 0.5 }}>847 active routes live now</span>
+              </div>
 
               <h1 style={{
-                fontSize: "clamp(34px, 7.5vw, 56px)",
-                lineHeight: 1.05,
-                color: "white",
-                marginBottom: 20
+                fontFamily: "var(--font-display)", fontWeight: 800,
+                fontSize: "clamp(32px, 4.5vw, 58px)",
+                lineHeight: 1.1, color: "white", marginBottom: 20, letterSpacing: -1
               }}>
                 Fill Your Empty<br />
-                Truck Space.
+                <span style={{ background: "linear-gradient(90deg, #60a5fa, #22d3ee)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+                  Truck Space.
+                </span><br />
+                <span style={{ color: "rgba(255,255,255,0.65)", fontWeight: 600, fontSize: "0.75em" }}>Earn on Every Route.</span>
               </h1>
 
-              <p style={{ fontSize: "17px", color: "#94a3b8", lineHeight: 1.75, marginBottom: 36, maxWidth: 460 }}>
+              <p style={{ fontFamily: "var(--font-body)", fontSize: 17, color: "#94a3b8", lineHeight: 1.75, marginBottom: 36, maxWidth: 460 }}>
                 FTLcargo connects verified truck drivers with shippers needing direct pallet delivery — no hubs, no brokers, no empty miles. Post your route in 2 minutes.
               </p>
 
-              <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 48, justifyContent: "center" }}>
-                <button style={{ fontSize: 16, padding: "15px 32px", background: "#1d4ed8", color: "white", borderRadius: 12 }}>
+              <div className="ftl-hero-btns" style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 48 }}>
+                <button className="btn-primary" style={{ fontSize: 16, padding: "15px 32px" }}>
                   🚛 I'm a Driver — Post Route
                 </button>
-                <button style={{ fontSize: 16, padding: "15px 32px", border: "2px solid #60a5fa", color: "white", background: "transparent", borderRadius: 12 }}>
+                <button className="btn-ghost">
                   📦 I Need to Ship Pallets
                 </button>
               </div>
 
-              <div style={{ display: "flex", gap: 32, flexWrap: "wrap", justifyContent: "center" }}>
+              <div className="ftl-hero-stats" style={{ display: "flex", gap: 32, flexWrap: "wrap" }}>
                 {STATS.map((s, i) => (
-                  <div key={i}>
-                    <div style={{ fontSize: 26, fontWeight: 800, color: "white" }}>{s.value}</div>
-                    <div style={{ fontSize: 11, color: "#64748b" }}>{s.label}</div>
+                  <div key={i} style={{ animation: `heroFadeUp 0.8s ease ${0.1 + i * 0.1}s both` }}>
+                    <div style={{ fontFamily: "var(--font-display)", fontSize: 26, fontWeight: 800, color: "white" }}>{s.value}</div>
+                    <div style={{ fontSize: 11, color: "#64748b", lineHeight: 1.4, maxWidth: 100 }}>{s.label}</div>
                   </div>
                 ))}
               </div>
             </div>
 
-            <div>
+            <div style={{ animation: "slideInRight 0.9s ease 0.3s both" }}>
               <RouteMap />
             </div>
           </div>
         </section>
 
-        {/* QUICK SEARCH, LIVE ROUTES, PAIN POINTS, and all other sections from your original code remain here */}
+        {/* ─── QUICK SEARCH ─── */}
+        <section className="ftl-search-section" style={{ background: "white", borderBottom: "1px solid #e2e8f0", padding: "0 24px" }}>
+          <div style={{ maxWidth: 1160, margin: "0 auto" }}>
+            <div className="ftl-search-card" style={{
+              background: "white", boxShadow: "0 4px 30px rgba(0,0,0,0.08)",
+              borderRadius: 14, padding: "6px 6px 6px 24px",
+              display: "flex", alignItems: "center",
+              border: "1px solid #e2e8f0",
+              transform: "translateY(-28px)",
+              flexWrap: "wrap"
+            }}>
+              <div className="ftl-search-tabs" style={{ display: "flex", gap: 4, marginRight: 16 }}>
+                {["driver", "shipper"].map(t => (
+                  <button key={t} onClick={() => setActiveTab(t)} style={{
+                    padding: "10px 24px", borderRadius: 6, border: "none",
+                    fontFamily: "var(--font-display)", fontSize: 14, fontWeight: 600,
+                    background: activeTab === t ? "#1d4ed8" : "transparent",
+                    color: activeTab === t ? "white" : "#64748b",
+                  }}>
+                    {t === "driver" ? "🚛 Post Route" : "📦 Find Truck"}
+                  </button>
+                ))}
+              </div>
 
-        {/* FOOTER */}
+              <div className="ftl-search-divider" style={{ width: 1, height: 40, background: "#e2e8f0", margin: "0 12px" }} />
+
+              <div className="ftl-search-fields" style={{ flex: 1, display: "grid", gridTemplateColumns: "1fr 1fr 80px 100px", gap: 1 }}>
+                <div className="ftl-search-field" style={{ padding: "8px 16px", borderRight: "1px solid #f1f5f9" }}>
+                  <div style={{ fontSize: 10, color: "#94a3b8", fontWeight: 600, letterSpacing: 1, marginBottom: 2 }}>FROM</div>
+                  <input style={{ border: "none", outline: "none", width: "100%", fontSize: 15, fontWeight: 500, background: "transparent", fontFamily: "var(--font-body)" }}
+                    placeholder="Riga, Latvia" value={searchFrom} onChange={e => setSearchFrom(e.target.value)} />
+                </div>
+                <div className="ftl-search-field" style={{ padding: "8px 16px", borderRight: "1px solid #f1f5f9" }}>
+                  <div style={{ fontSize: 10, color: "#94a3b8", fontWeight: 600, letterSpacing: 1, marginBottom: 2 }}>TO</div>
+                  <input style={{ border: "none", outline: "none", width: "100%", fontSize: 15, fontWeight: 500, background: "transparent", fontFamily: "var(--font-body)" }}
+                    placeholder="Berlin, Germany" value={searchTo} onChange={e => setSearchTo(e.target.value)} />
+                </div>
+                <div className="ftl-search-field" style={{ padding: "8px 16px", borderRight: "1px solid #f1f5f9" }}>
+                  <div style={{ fontSize: 10, color: "#94a3b8", fontWeight: 600, letterSpacing: 1, marginBottom: 2 }}>PALLETS</div>
+                  <select style={{ border: "none", outline: "none", fontSize: 15, fontWeight: 500, background: "transparent", width: "100%", fontFamily: "var(--font-body)" }}>
+                    {[1,2,3,4,5,6].map(n => <option key={n}>{n}</option>)}
+                  </select>
+                </div>
+                <div className="ftl-search-field" style={{ padding: "8px 16px" }}>
+                  <div style={{ fontSize: 10, color: "#94a3b8", fontWeight: 600, letterSpacing: 1, marginBottom: 2 }}>DATE</div>
+                  <input type="date" style={{ border: "none", outline: "none", fontSize: 13, fontWeight: 500, background: "transparent", width: "100%", fontFamily: "var(--font-body)" }} />
+                </div>
+              </div>
+
+              <button className="ftl-search-btn" style={{ borderRadius: 10, padding: "18px 32px", fontSize: 15, flexShrink: 0, margin: 4, background: "#1d4ed8", color: "white", border: "none", fontFamily: "var(--font-display)" }}>
+                Search →
+              </button>
+            </div>
+          </div>
+        </section>
+
+        {/* ─── LIVE ROUTES ─── */}
+        <section id="live-routes" ref={registerRef("live-routes")} className="ftl-routes-section" style={{ padding: "20px 24px 80px" }}>
+          <div style={{ maxWidth: 1160, margin: "0 auto", ...fadeIn("live-routes") }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
+              <div>
+                <h2 style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 22, marginBottom: 4 }}>Live Routes This Week</h2>
+                <p style={{ color: "#64748b", fontSize: 14 }}>Available truck space on the Baltics → Germany corridor</p>
+              </div>
+              <span style={{ fontSize: 13, color: "#3b82f6", cursor: "pointer", fontWeight: 600 }}>View all routes →</span>
+            </div>
+
+            <div className="ftl-routes-wrapper" style={{ background: "white", borderRadius: 14, overflow: "hidden", border: "1px solid #e2e8f0" }}>
+              <div className="ftl-routes-grid" style={{ display: "grid", gridTemplateColumns: "2fr 1.5fr 1fr 1fr 1fr", gap: 12, padding: "12px 20px", background: "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>
+                {["Route", "Driver", "Capacity", "Departure", "Est. Price"].map(h => (
+                  <span key={h} style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", letterSpacing: 0.5 }}>{h.toUpperCase()}</span>
+                ))}
+              </div>
+
+              {ROUTES_LIVE.map((r, i) => (
+                <div key={i} className="ftl-routes-grid" style={{
+                  display: "grid",
+                  gridTemplateColumns: "2fr 1.5fr 1fr 1fr 1fr",
+                  gap: 12,
+                  padding: "16px 20px",
+                  borderBottom: i < ROUTES_LIVE.length - 1 ? "1px solid #f1f5f9" : "none",
+                  transition: "background 0.15s",
+                }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ fontWeight: 700, fontSize: 15 }}>{r.from}</span>
+                    <span style={{ color: "#3b82f6", fontSize: 14, fontWeight: 700 }}>→</span>
+                    <span style={{ fontWeight: 700, fontSize: 15 }}>{r.to}</span>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <div style={{ width: 30, height: 30, borderRadius: "50%", background: "linear-gradient(135deg,#dbeafe,#bfdbfe)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, color: "#1d4ed8" }}>
+                      {r.driver.split(" ").map(n => n[0]).join("")}
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 600 }}>{r.driver}</div>
+                      {r.verified && <div style={{ fontSize: 10, color: "#10b981", fontWeight: 600 }}>✓ Verified</div>}
+                    </div>
+                  </div>
+                  <div>
+                    <span style={{ fontWeight: 600, fontSize: 14 }}>{r.pallets}</span>
+                    <span style={{ color: "#94a3b8", fontSize: 13 }}> pallets</span>
+                  </div>
+                  <div style={{ fontSize: 13, fontWeight: 500, color: "#0f172a" }}>{r.date}</div>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <span style={{ fontFamily: "var(--font-display)", fontWeight: 700, color: "#1d4ed8", fontSize: 16 }}>{r.price}</span>
+                    <button style={{ background: "#eff6ff", border: "1px solid #bfdbfe", color: "#1d4ed8", padding: "6px 14px", borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Contact</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ─── PAIN POINTS ─── */}
+        <section id="pains" ref={registerRef("pains")} className="ftl-pains-section" style={{ background: "#f1f5f9", padding: "80px 24px" }}>
+          <div style={{ maxWidth: 1160, margin: "0 auto" }}>
+            <div style={{ textAlign: "center", marginBottom: 60, ...fadeIn("pains") }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: "#1d4ed8", letterSpacing: 2, textTransform: "uppercase" }}>The Problem</span>
+              <h2 style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: "clamp(28px, 3vw, 42px)", marginTop: 8, marginBottom: 16 }}>Freight is broken for everyone</h2>
+              <p style={{ fontFamily: "var(--font-body)", color: "#64748b", fontSize: 17, maxWidth: 540, margin: "0 auto", lineHeight: 1.7 }}>
+                Drivers lose money on empty miles. Shippers overpay for slow, opaque logistics. FTLcargo fixes both.
+              </p>
+            </div>
+
+            <div className="ftl-pains-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 32 }}>
+              {PAIN_POINTS.map((group, gi) => (
+                <div key={gi} style={{ ...fadeIn("pains", gi * 0.15) }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
+                    <span style={{ fontSize: 24 }}>{group.icon}</span>
+                    <div>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: group.color, letterSpacing: 1.5 }}>{group.who}</div>
+                      <div style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 20 }}>
+                        {gi === 0 ? "Drivers are losing money daily" : "Shippers are stuck in the old system"}
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                    {group.pains.map((p, pi) => (
+                      <div key={pi} style={{
+                        background: "white", borderRadius: 12, padding: "20px", borderLeft: `3px solid ${group.color}`,
+                        boxShadow: "0 2px 12px rgba(0,0,0,0.05)",
+                      }}>
+                        <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 6 }}>{p.title}</div>
+                        <div style={{ fontFamily: "var(--font-body)", fontSize: 14, color: "#64748b", lineHeight: 1.6 }}>{p.desc}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* FEATURES, NETWORK EFFECT, TESTIMONIALS, etc. - add the rest of your original sections here */}
+
+        {/* Example footer with new logo */}
         <footer style={{ background: "#0f172a", padding: "56px 24px 32px", color: "#475569" }}>
           <div style={{ maxWidth: 1160, margin: "0 auto" }}>
-            <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr", gap: 48, marginBottom: 48 }}>
+            <div className="ftl-footer-grid" style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr", gap: 48, marginBottom: 48 }}>
               <div>
-                <img src="/ftl-cargo-logo.png" alt="FTL Cargo" style={{ height: 42, width: "auto", marginBottom: 16 }} />
-                <p style={{ fontSize: 14, color: "#475569", lineHeight: 1.7, maxWidth: 260 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+                  <img 
+                    src="/ftl-cargo-logo.png" 
+                    alt="FTL Cargo" 
+                    style={{ height: 42, width: "auto" }} 
+                  />
+                </div>
+                <p style={{ fontFamily: "var(--font-body)", fontSize: 14, color: "#475569", lineHeight: 1.7, maxWidth: 260 }}>
                   Direct pallet freight marketplace. Connecting verified truck drivers with shippers across Europe.
                 </p>
               </div>
+              {/* Add remaining footer columns here as in your original code */}
             </div>
             <div style={{ borderTop: "1px solid #1e293b", paddingTop: 24, textAlign: "center" }}>
               © 2026 FTLcargo. Built for drivers first.
