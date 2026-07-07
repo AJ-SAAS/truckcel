@@ -40,7 +40,7 @@ const FEATURES = [
   { icon: "📍", title: "Post Your Route", desc: "Drivers post recurring routes in 2 minutes. Set capacity, dates, and contact preferences. Done.", tag: "FOR DRIVERS", color: "#1d4ed8" },
   { icon: "🔍", title: "Instant Route Search", desc: "Shippers search by origin, destination, pallet count and date. See available trucks in real time.", tag: "FOR SHIPPERS", color: "#0891b2" },
   { icon: "🔔", title: "Backhaul Alerts", desc: "Set your regular route once. Get instant SMS when a return load matches your corridor.", tag: "FOR DRIVERS", color: "#1d4ed8" },
-  { icon: "✅", title: "Verified Carriers Only", desc: "Every driver on Truckcel holds cargo insurance and has passed business verification. No surprises.", tag: "TRUST", color: "#059669" },
+  { icon: "✅", title: "Verified Carriers Only", desc: "Every driver on FTLcargo holds cargo insurance and has passed business verification. No surprises.", tag: "TRUST", color: "#059669" },
   { icon: "📱", title: "Mobile-First", desc: "Drivers post from the cab. Shippers search from the warehouse. Designed for real-world use.", tag: "PLATFORM", color: "#7c3aed" },
   { icon: "⚡", title: "Direct Contact", desc: "No payment escrow, no broker layer. You see the driver's number and call directly to agree terms.", tag: "SIMPLE", color: "#d97706" },
 ];
@@ -54,8 +54,8 @@ const NETWORK_STEPS = [
 
 const TESTIMONIALS = [
   { name: "Mārtiņš K.", role: "Owner-operator, Riga", trucks: "1 truck", quote: "I drive Riga–Berlin every Tuesday. My return was always empty. Now I fill 4–6 pallets every week. That's an extra €600–900 a month I wasn't earning before.", initials: "MK" },
-  { name: "Sandra B.", role: "Logistics coordinator, Tallinn", trucks: "Fleet of 8", quote: "We used DHL for urgent pallet shipments. 3–4 days, expensive. Now our drivers fill their own empties and we use Truckcel for overflow. Costs dropped 40%.", initials: "SB" },
-  { name: "Tomas V.", role: "Manufacturer, Kaunas", trucks: "Shipper", quote: "Production stopped. We needed a machine part from Hamburg urgently. Found a driver on Truckcel already heading to Vilnius. Part arrived next morning. Crisis avoided.", initials: "TV" },
+  { name: "Sandra B.", role: "Logistics coordinator, Tallinn", trucks: "Fleet of 8", quote: "We used DHL for urgent pallet shipments. 3–4 days, expensive. Now our drivers fill their own empties and we use FTLcargo for overflow. Costs dropped 40%.", initials: "SB" },
+  { name: "Tomas V.", role: "Manufacturer, Kaunas", trucks: "Shipper", quote: "Production stopped. We needed a machine part from Hamburg urgently. Found a driver on FTLcargo already heading to Vilnius. Part arrived next morning. Crisis avoided.", initials: "TV" },
 ];
 
 const ROUTES_LIVE = [
@@ -210,7 +210,6 @@ export default function Home() {
 
   return (
     <>
-
       <div style={{ fontFamily: "'Syne', 'Segoe UI', sans-serif", background: "#f8fafc", color: "#0f172a", overflowX: "hidden" }}>
         <style>{`
           *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -223,7 +222,7 @@ export default function Home() {
           @keyframes slideInRight { from { opacity: 0; transform: translateX(30px); } to { opacity: 1; transform: translateX(0); } }
         `}</style>
 
-        {/* ─── HERO ─── */}
+        {/* ─── HERO with FTL Cargo Logo (you can also import Header component here) ─── */}
         <section style={{
           background: "linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #0c4a6e 100%)",
           padding: "100px 24px 80px",
@@ -255,7 +254,7 @@ export default function Home() {
               </h1>
 
               <p style={{ fontFamily: "'Epilogue', sans-serif", fontSize: 17, color: "#94a3b8", lineHeight: 1.75, marginBottom: 36, maxWidth: 460 }}>
-                Truckcel connects verified truck drivers with shippers needing direct pallet delivery — no hubs, no brokers, no empty miles. Post your route in 2 minutes.
+                FTLcargo connects verified truck drivers with shippers needing direct pallet delivery — no hubs, no brokers, no empty miles. Post your route in 2 minutes.
               </p>
 
               <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 48 }}>
@@ -402,7 +401,7 @@ export default function Home() {
               <span style={{ fontSize: 12, fontWeight: 700, color: "#1d4ed8", letterSpacing: 2, textTransform: "uppercase" }}>The Problem</span>
               <h2 style={{ fontFamily: "'Syne'", fontWeight: 800, fontSize: "clamp(28px, 3vw, 42px)", marginTop: 8, marginBottom: 16 }}>Freight is broken for everyone</h2>
               <p style={{ fontFamily: "'Epilogue'", color: "#64748b", fontSize: 17, maxWidth: 540, margin: "0 auto", lineHeight: 1.7 }}>
-                Drivers lose money on empty miles. Shippers overpay for slow, opaque logistics. Truckcel fixes both.
+                Drivers lose money on empty miles. Shippers overpay for slow, opaque logistics. FTLcargo fixes both.
               </p>
             </div>
 
@@ -435,28 +434,28 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Add the remaining sections from Claude's code here... */}
-        {/* FEATURES, NETWORK EFFECT, TESTIMONIALS, DRIVER CTA, FOOTER */}
-        {/* For brevity, I've shown the first few sections above. */}
-        {/* Copy the rest from your earlier Claude message and paste below this comment. */}
+        {/* FEATURES, NETWORK EFFECT, TESTIMONIALS, etc. - add the rest of your original sections here */}
 
-        {/* Example footer snippet to close */}
+        {/* Example footer with new logo */}
         <footer style={{ background: "#0f172a", padding: "56px 24px 32px", color: "#475569" }}>
           <div style={{ maxWidth: 1160, margin: "0 auto" }}>
             <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr", gap: 48, marginBottom: 48 }}>
               <div>
                 <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
-                  <div style={{ width: 34, height: 34, background: "linear-gradient(135deg, #1d4ed8, #0891b2)", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>🚛</div>
-                  <span style={{ fontFamily: "'Syne'", fontWeight: 800, fontSize: 18, color: "white" }}>Truckcel</span>
+                  <img 
+                    src="/ftl-cargo-logo.png" 
+                    alt="FTL Cargo" 
+                    style={{ height: 42, width: "auto" }} 
+                  />
                 </div>
                 <p style={{ fontFamily: "'Epilogue'", fontSize: 14, color: "#475569", lineHeight: 1.7, maxWidth: 260 }}>
                   Direct pallet freight marketplace. Connecting verified truck drivers with shippers across Europe.
                 </p>
               </div>
-              {/* Add other footer columns as in Claude's code */}
+              {/* Add remaining footer columns here as in your original code */}
             </div>
             <div style={{ borderTop: "1px solid #1e293b", paddingTop: 24, textAlign: "center" }}>
-              © 2026 Truckcel. Built for drivers first.
+              © 2026 FTLcargo. Built for drivers first.
             </div>
           </div>
         </footer>

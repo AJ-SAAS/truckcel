@@ -1,10 +1,9 @@
-// components/Header.tsx
 "use client";
 
+import Link from "next/link";
 import { useState, useEffect } from "react";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 export default function Header() {
@@ -38,32 +37,13 @@ export default function Header() {
         zIndex: 100,
       }}
     >
-      <Link href="/" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
-        <div
-          style={{
-            width: 36,
-            height: 36,
-            background: "linear-gradient(135deg, #1d4ed8, #0891b2)",
-            borderRadius: 8,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: 18,
-            color: "white",
-          }}
-        >
-          🚛
-        </div>
-        <span
-          style={{
-            fontFamily: "'Syne', sans-serif",
-            fontWeight: 800,
-            fontSize: 20,
-            color: "#0f172a",
-          }}
-        >
-          Truckcel
-        </span>
+      {/* NEW FTL CARGO LOGO */}
+      <Link href="/" style={{ display: "flex", alignItems: "center", gap: 12, textDecoration: "none" }}>
+        <img 
+          src="/ftl-cargo-logo.png" 
+          alt="FTL Cargo" 
+          style={{ height: 42, width: "auto" }} 
+        />
       </Link>
 
       <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
