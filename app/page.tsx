@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 
 // ─── ALL CONSTANTS FROM CLAUDE ──────────────────────────────────────────────
 const NAV_LINKS = ["How It Works", "For Drivers", "For Shippers", "Pricing"];
@@ -183,6 +184,7 @@ function RouteMap() {
 
 // ─── MAIN HOMEPAGE ───────────────────────────────────────────────────────────
 export default function Home() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState("driver");
   const [searchFrom, setSearchFrom] = useState("");
   const [searchTo, setSearchTo] = useState("");
@@ -334,10 +336,10 @@ export default function Home() {
               </p>
 
               <div className="ftl-hero-btns" style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 48 }}>
-                <button className="btn-primary" style={{ fontSize: 16, padding: "15px 32px" }}>
+                <button className="btn-primary" style={{ fontSize: 16, padding: "15px 32px" }} onClick={() => router.push("/register")}>
                   🚛 I'm a Driver — Post Route
                 </button>
-                <button className="btn-ghost">
+                <button className="btn-ghost" onClick={() => router.push("/register")}>
                   📦 I Need to Ship Pallets
                 </button>
               </div>
