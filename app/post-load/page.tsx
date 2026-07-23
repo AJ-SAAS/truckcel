@@ -1,3 +1,4 @@
+// app/post-load/page.tsx
 "use client";
 
 import { useState } from "react";
@@ -54,7 +55,6 @@ export default function PostLoadPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
-  const [submittedData, setSubmittedData] = useState<LoadForm | null>(null);
   const [images, setImages] = useState<File[]>([]);
 
   const {
@@ -62,7 +62,6 @@ export default function PostLoadPage() {
     handleSubmit,
     formState: { errors },
     reset,
-    watch,
   } = useForm<LoadForm>({
     resolver: zodResolver(loadSchema) as Resolver<LoadForm>,
     defaultValues: { paymentTerms: "on_delivery" },
@@ -94,7 +93,7 @@ export default function PostLoadPage() {
   const onSubmit: SubmitHandler<LoadForm> = async (data) => {
     const user = auth.currentUser;
     if (!user) {
-      alert("❌ You are not logged in. Please refresh and log in again.");
+      alert("❌ You must be logged in to post a load.");
       router.push("/login");
       return;
     }
@@ -102,28 +101,31 @@ export default function PostLoadPage() {
     setLoading(true);
 
     try {
+      // Save to Firestore
       const docRef = await addDoc(collection(db, "shipments"), {
         ...data,
         shipperId: user.uid,
         status: "open",
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
+        imageUrls: [], // Will be updated if images are uploaded
       });
 
+      // Upload images if any
       if (images.length > 0) {
         const imageUrls = await uploadImages(docRef.id);
         console.log("✅ Photos uploaded:", imageUrls);
       }
 
-      console.log("✅ Load posted successfully!");
-      setSubmittedData(data);
+      console.log("✅ Load posted successfully! ID:", docRef.id);
+      
       setSuccess(true);
       reset({ paymentTerms: "on_delivery" });
       setImages([]);
 
     } catch (err: any) {
       console.error("🚨 Post Load Error:", err);
-      alert(`Failed to post load:\n${err.message || "Unknown error"}`);
+      alert(`Failed to post load: ${err.message || "Unknown error. Please try again."}`);
     } finally {
       setLoading(false);
     }
@@ -131,15 +133,13 @@ export default function PostLoadPage() {
 
   // Success Screen
   if (success) {
-    const formData = submittedData ?? watch();
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
         <div className="bg-white rounded-3xl p-10 max-w-lg w-full text-center shadow-xl">
           <div className="text-7xl mb-6">🚛</div>
           <h2 className="text-3xl font-bold text-slate-900 mb-3">Load Posted Successfully!</h2>
           <p className="text-slate-600 mb-8">
-            Your shipment from <strong>{formData?.pickupCity}</strong> to{" "}
-            <strong>{formData?.deliveryCity}</strong> is now live.
+            Your shipment is now visible to drivers.
           </p>
 
           <div className="flex gap-4 justify-center">
@@ -172,7 +172,7 @@ export default function PostLoadPage() {
         </button>
 
         <h1 className="text-4xl font-bold text-slate-900 mb-2">Post a New Load</h1>
-        <p className="text-slate-600 mb-10">Fill in the shipment details. Carriers will be able to see and bid on it.</p>
+        <p className="text-slate-600 mb-10">Fill in the shipment details. Drivers will be able to see and accept it.</p>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-10">
           {/* Route Section */}

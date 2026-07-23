@@ -28,13 +28,11 @@ export default function LoginPage() {
       const userDoc = await getDoc(doc(db, "users", user.uid));
       const role = userDoc.exists() ? userDoc.data()?.role : null;
 
-      alert("Logged in successfully! 🎉");
-
-      // Redirect based on role
+      // Redirect based on role - simplified
       if (role === "driver") {
-        router.push("/onboarding/driver");
+        router.push("/dashboard");           // Changed from onboarding
       } else if (role === "shipper") {
-        router.push("/"); // temporary — change to /post-load or /search later
+        router.push("/dashboard");
       } else {
         router.push("/");
       }

@@ -1,3 +1,4 @@
+// app/dashboard/page.tsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -53,7 +54,11 @@ const STATUS_COLORS: Record<string, { bg: string; color: string; label: string }
 };
 
 function StatusBadge({ status }: { status: string }) {
-  const s = STATUS_COLORS[status?.toLowerCase()] ?? { bg: "#f3f4f6", color: "#374151", label: status || "Unknown" };
+  const s = STATUS_COLORS[status?.toLowerCase()] ?? { 
+    bg: "#f3f4f6", 
+    color: "#374151", 
+    label: status || "Unknown" 
+  };
   return (
     <span style={{ 
       background: s.bg, 
@@ -108,6 +113,9 @@ function ShipperDashboard({ uid }: { uid: string }) {
     const unsub = onSnapshot(q, (snap) => {
       const data = snap.docs.map(d => ({ id: d.id, ...d.data() } as Shipment));
       setShipments(data);
+      setLoading(false);
+    }, (err) => {
+      console.error("Error loading shipments:", err);
       setLoading(false);
     });
 
@@ -197,6 +205,7 @@ function ShipperDashboard({ uid }: { uid: string }) {
                 </span>
               ))}
             </div>
+
             {shipments.map((s, i) => (
               <div 
                 key={s.id} 
@@ -237,10 +246,10 @@ function DriverDashboard({ uid }: { uid: string }) {
   const [openLoads, setOpenLoads] = useState<Shipment[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Load driver profile
   useEffect(() => {
     if (!uid) return;
-
-    const unsubscribe = onSnapshot(doc(db, "drivers", uid), (snap) => {
+    const unsub = onSnapshot(doc(db, "drivers", uid), (snap) => {
       if (snap.exists()) {
         const data = snap.data();
         setProfile({
@@ -253,10 +262,10 @@ function DriverDashboard({ uid }: { uid: string }) {
         });
       }
     });
-
-    return () => unsubscribe();
+    return () => unsub();
   }, [uid]);
 
+  // Load shipments
   useEffect(() => {
     const loadShipments = async () => {
       try {
@@ -268,7 +277,7 @@ function DriverDashboard({ uid }: { uid: string }) {
         const openSnap = await getDocs(openQ);
         setOpenLoads(openSnap.docs.map(d => ({ id: d.id, ...d.data() } as Shipment)).slice(0, 5));
       } catch (err) {
-        console.error(err);
+        console.error("Error loading loads:", err);
       } finally {
         setLoading(false);
       }
@@ -307,15 +316,22 @@ function DriverDashboard({ uid }: { uid: string }) {
       </div>
 
       <div style={{ display: "flex", gap: 12, marginBottom: 28 }}>
-        <button onClick={() => router.push("/browse-loads")} style={{ padding: "12px 24px", background: "#1d4ed8", color: "white", border: "none", borderRadius: 8, fontWeight: 600, cursor: "pointer", fontSize: 15 }}>
+        <button 
+          onClick={() => router.push("/browse-loads")} 
+          style={{ padding: "12px 24px", background: "#1d4ed8", color: "white", border: "none", borderRadius: 8, fontWeight: 600, cursor: "pointer", fontSize: 15 }}
+        >
           🔍 Browse Available Loads
         </button>
-        <button onClick={() => router.push("/map")} style={{ padding: "12px 24px", border: "1px solid #d1d5db", borderRadius: 8, background: "white", color: "#374151", fontWeight: 600, cursor: "pointer", fontSize: 15 }}>
+        <button 
+          onClick={() => router.push("/map")} 
+          style={{ padding: "12px 24px", border: "1px solid #d1d5db", borderRadius: 8, background: "white", color: "#374151", fontWeight: 600, cursor: "pointer", fontSize: 15 }}
+        >
           🗺️ View Route Map
         </button>
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+        {/* My Active Loads */}
         <div style={{ background: "white", borderRadius: 12, border: "1px solid #e5e7eb", overflow: "hidden" }}>
           <div style={{ padding: "20px 24px", borderBottom: "1px solid #e5e7eb" }}>
             <h2 style={{ fontSize: 16, fontWeight: 700, color: "#111827" }}>My Active Loads</h2>
@@ -337,6 +353,7 @@ function DriverDashboard({ uid }: { uid: string }) {
           )}
         </div>
 
+        {/* Open Loads Near You */}
         <div style={{ background: "white", borderRadius: 12, border: "1px solid #e5e7eb", overflow: "hidden" }}>
           <div style={{ padding: "20px 24px", borderBottom: "1px solid #e5e7eb", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <h2 style={{ fontSize: 16, fontWeight: 700, color: "#111827" }}>Open Loads Near You</h2>
@@ -412,6 +429,7 @@ export default function DashboardPage() {
 
   return (
     <div style={{ minHeight: "100vh", background: "#f8fafc" }}>
+      {/* Top Navigation */}
       <div style={{ background: "white", borderBottom: "1px solid #e5e7eb", padding: "0 24px" }}>
         <div style={{ maxWidth: 1200, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", height: 64 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -424,20 +442,26 @@ export default function DashboardPage() {
 
           <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
             <span style={{ fontSize: 14, color: "#6b7280" }}>{userData?.email}</span>
-            <button onClick={handleSignOut} style={{ padding: "8px 16px", border: "1px solid #d1d5db", borderRadius: 7, background: "white", color: "#374151", fontSize: 14, fontWeight: 500, cursor: "pointer" }}>
+            <button 
+              onClick={handleSignOut} 
+              style={{ padding: "8px 16px", border: "1px solid #d1d5db", borderRadius: 7, background: "white", color: "#374151", fontSize: 14, fontWeight: 500, cursor: "pointer" }}
+            >
               Sign out
             </button>
           </div>
         </div>
       </div>
 
+      {/* Main Content */}
       <div style={{ maxWidth: 1200, margin: "0 auto", padding: "36px 24px" }}>
         <div style={{ marginBottom: 28 }}>
           <h1 style={{ fontSize: 26, fontWeight: 800, color: "#111827", fontFamily: "'Syne', sans-serif" }}>
             {userData?.role === "driver" ? "Driver Dashboard" : "Shipper Dashboard"}
           </h1>
           <p style={{ color: "#6b7280", fontSize: 14, marginTop: 4 }}>
-            {userData?.role === "driver" ? "Browse available loads and manage your active shipments." : "Post loads and track your shipments in real time."}
+            {userData?.role === "driver" 
+              ? "Browse available loads and manage your active shipments." 
+              : "Post loads and track your shipments in real time."}
           </p>
         </div>
 
@@ -446,4 +470,4 @@ export default function DashboardPage() {
       </div>
     </div>
   );
-} 
+}
