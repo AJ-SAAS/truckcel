@@ -76,16 +76,23 @@ export default function BrowseLoadsPage() {
         orderBy("createdAt", "desc")
       );
 
-      const unsubscribeSnapshot = onSnapshot(q, (snapshot) => {
-        const data = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        })) as Shipment[];
+      const unsubscribeSnapshot = onSnapshot(
+        q,
+        (snapshot) => {
+          const data = snapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+          })) as Shipment[];
 
-        setLoads(data);
-        setFilteredLoads(data);
-        setLoading(false);
-      });
+          setLoads(data);
+          setFilteredLoads(data);
+          setLoading(false);
+        },
+        (error) => {
+          console.error("🚨 Browse Loads listener error:", error);
+          setLoading(false);
+        }
+      );
 
       return () => unsubscribeSnapshot();
     });
