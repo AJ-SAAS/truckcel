@@ -292,20 +292,6 @@ function DriverDashboard({ uid }: { uid: string }) {
     active: myLoads.filter(s => s.status === "in_transit" || s.status === "matched").length,
     open: openLoads.length,
   };
-
-  if (profile?.status === "pending_review") {
-    return (
-      <div style={{ background: "white", borderRadius: 12, padding: "48px 40px", textAlign: "center", border: "1px solid #e5e7eb", maxWidth: 600, margin: "40px auto" }}>
-        <div style={{ fontSize: 64, marginBottom: 24 }}>⏳</div>
-        <h2 style={{ fontSize: 26, fontWeight: 700, marginBottom: 16, color: "#111827" }}>Application Under Review</h2>
-        <p style={{ color: "#6b7280", fontSize: 16, lineHeight: 1.7 }}>
-          Hi {profile.fullName ? profile.fullName.split(" ")[0] : "there"},<br />
-          Your driver profile is being reviewed. We will notify you soon.
-        </p>
-      </div>
-    );
-  }
-
   return (
     <div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 32 }}>
