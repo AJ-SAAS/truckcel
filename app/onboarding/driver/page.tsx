@@ -1,11 +1,12 @@
+// app/onboarding/driver/page.tsx
 "use client";
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { auth, db, storage } from "@/lib/firebase";
+import { auth, db } from "@/lib/firebase";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { onAuthStateChanged } from "firebase/auth";
+import { uploadDriverFile } from "@/lib/uploadDriverFile";
 
 const STEPS = [
   { id: "account", title: "Account Setup", desc: "Basic information" },
@@ -174,23 +175,13 @@ export default function DriverOnboarding() {
     return () => unsubscribe();
   }, [router]);
 
-  const uploadFileToStorage = async (file: File, folder: string) => {
-    if (!user) throw new Error("User not authenticated");
-
-    const fileName = `${Date.now()}-${file.name.replace(/\s+/g, "-")}`;
-    const storageRef = ref(storage, `${folder}/${user.uid}/${fileName}`);
-
-    await uploadBytes(storageRef, file);
-    return getDownloadURL(storageRef);
-  };
-
   const handleNext = async () => {
     if (currentStep < STEPS.length - 1) {
       setCurrentStep(currentStep + 1);
       return;
     }
 
-    // Final Step
+    // Final Step - Save everything
     if (!user) {
       alert("Please log in again");
       return;
@@ -212,16 +203,25 @@ export default function DriverOnboarding() {
         primaryTo: formData.primaryTo,
         status: "pending_review",
         createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
       };
 
-      if (formData.licenseFront) dataToSave.licenseFrontUrl = await uploadFileToStorage(formData.licenseFront, "drivers/licenses");
-      if (formData.licenseBack) dataToSave.licenseBackUrl = await uploadFileToStorage(formData.licenseBack, "drivers/licenses");
-      if (formData.insurance) dataToSave.insuranceUrl = await uploadFileToStorage(formData.insurance, "drivers/insurance");
+      // Upload files using the helper
+      if (formData.licenseFront) {
+        dataToSave.licenseFrontUrl = await uploadDriverFile(formData.licenseFront, "license");
+      }
+      if (formData.licenseBack) {
+        dataToSave.licenseBackUrl = await uploadDriverFile(formData.licenseBack, "license");
+      }
+      if (formData.insurance) {
+        dataToSave.insuranceUrl = await uploadDriverFile(formData.insurance, "insurance");
+      }
 
       await setDoc(doc(db, "drivers", user.uid), dataToSave, { merge: true });
 
       alert("✅ Onboarding completed successfully!");
       router.push("/dashboard");
+
     } catch (err: any) {
       console.error("Onboarding Error:", err);
       setError(err.message || "Failed to save data");
@@ -257,7 +257,7 @@ export default function DriverOnboarding() {
         </div>
 
         <div style={{ padding: "24px 32px", display: "flex", justifyContent: "space-between", borderTop: "1px solid #e2e8f0" }}>
-          <button onClick={handleBack} disabled={currentStep === 0} style={{ padding: "12px 28px", border: "1px solid #d1d5db", borderRadius: 8 }}>
+          <button onClick={handleBack} disabled={currentStep === 0 || loading} style={{ padding: "12px 28px", border: "1px solid #d1d5db", borderRadius: 8 }}>
             Back
           </button>
           <button 
