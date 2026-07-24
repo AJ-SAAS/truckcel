@@ -2,10 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { doc, getDoc, updateDoc, serverTimestamp } from "firebase/firestore";
+import { doc, getDoc, updateDoc, serverTimestamp, increment } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
-import { MapPin, Package, Truck, DollarSign, Clock, ArrowLeft, ImageIcon } from "lucide-react";
+import { MapPin, Package, Truck, DollarSign, Clock, ArrowLeft, ImageIcon, Check } from "lucide-react";
 
 interface Shipment {
   id: string;
@@ -27,6 +27,10 @@ interface Shipment {
   shipperId: string;
   carrierId?: string;
   imageUrls?: string[];
+  createdAt?: any;
+  matchedAt?: any;
+  startedAt?: any;
+  completedAt?: any;
 }
 
 const CARGO_LABELS: Record<string, string> = {
@@ -40,6 +44,83 @@ const CARGO_LABELS: Record<string, string> = {
   other: "Other",
 };
 
+const TIMELINE_STEPS = [
+  { key: "posted", label: "Posted", statuses: ["open", "matched", "in_transit", "delivered"] },
+  { key: "matched", label: "Driver accepted", statuses: ["matched", "in_transit", "delivered"] },
+  { key: "in_transit", label: "In transit", statuses: ["in_transit", "delivered"] },
+  { key: "delivered", label: "Delivered", statuses: ["delivered"] },
+];
+
+function formatTimestamp(ts: any): string {
+  if (!ts) return "";
+  try {
+    const date = ts.toDate ? ts.toDate() : new Date(ts);
+    return date.toLocaleDateString(undefined, { month: "short", day: "numeric" }) +
+      " · " + date.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+  } catch {
+    return "";
+  }
+}
+
+function ShipmentTimeline({ load }: { load: Shipment }) {
+  const timestampFor: Record<string, any> = {
+    posted: load.createdAt,
+    matched: load.matchedAt,
+    in_transit: load.startedAt,
+    delivered: load.completedAt,
+  };
+
+  if (load.status === "cancelled") {
+    return (
+      <div className="bg-white rounded-3xl p-8 shadow border border-slate-100 mb-8">
+        <div className="flex items-center gap-3">
+          <span className="w-3 h-3 rounded-full bg-red-500" />
+          <p className="font-medium text-slate-700">This load was cancelled by the shipper.</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white rounded-3xl p-8 shadow border border-slate-100 mb-8">
+      <h2 className="text-xl font-semibold mb-6">Shipment timeline</h2>
+      <div className="space-y-0">
+        {TIMELINE_STEPS.map((step, i) => {
+          const isDone = step.statuses.includes(load.status);
+          const isLast = i === TIMELINE_STEPS.length - 1;
+          const ts = timestampFor[step.key];
+          return (
+            <div key={step.key} className="flex gap-4">
+              <div className="flex flex-col items-center">
+                <div
+                  className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
+                    isDone ? "bg-green-600" : "bg-slate-200"
+                  }`}
+                >
+                  {isDone ? (
+                    <Check className="w-4 h-4 text-white" />
+                  ) : (
+                    <span className="w-2 h-2 rounded-full bg-slate-400" />
+                  )}
+                </div>
+                {!isLast && (
+                  <div className={`w-0.5 flex-1 min-h-[28px] ${isDone ? "bg-green-600" : "bg-slate-200"}`} />
+                )}
+              </div>
+              <div className="pb-8">
+                <p className={`font-medium ${isDone ? "text-slate-900" : "text-slate-400"}`}>{step.label}</p>
+                {isDone && ts && (
+                  <p className="text-xs text-slate-400 mt-0.5">{formatTimestamp(ts)}</p>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export default function LoadDetailPage() {
   const { id } = useParams();
   const router = useRouter();
@@ -47,6 +128,7 @@ export default function LoadDetailPage() {
   const [load, setLoad] = useState<Shipment | null>(null);
   const [loading, setLoading] = useState(true);
   const [accepting, setAccepting] = useState(false);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
   const [uid, setUid] = useState<string | null>(null);
   const [isCarrier, setIsCarrier] = useState(false);
   const [activeImage, setActiveImage] = useState<string | null>(null);
@@ -98,6 +180,14 @@ export default function LoadDetailPage() {
     fetchLoad();
   }, [id, router]);
 
+  const refreshLoad = async () => {
+    if (!id) return;
+    const docSnap = await getDoc(doc(db, "shipments", id as string));
+    if (docSnap.exists()) {
+      setLoad({ id: docSnap.id, ...docSnap.data() } as Shipment);
+    }
+  };
+
   const handleAccept = async () => {
     if (!uid || !load) return;
 
@@ -106,16 +196,62 @@ export default function LoadDetailPage() {
       await updateDoc(doc(db, "shipments", load.id), {
         status: "matched",
         carrierId: uid,
+        matchedAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
 
+      await refreshLoad();
       alert("🎉 Load accepted successfully!");
-      router.push("/dashboard");
     } catch (err) {
       console.error(err);
       alert("Failed to accept load. Please try again.");
     } finally {
       setAccepting(false);
+    }
+  };
+
+  const handleStartTrip = async () => {
+    if (!load) return;
+    setUpdatingStatus(true);
+    try {
+      await updateDoc(doc(db, "shipments", load.id), {
+        status: "in_transit",
+        startedAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+      await refreshLoad();
+    } catch (err) {
+      console.error(err);
+      alert("Failed to update trip status. Please try again.");
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
+
+  const handleMarkDelivered = async () => {
+    if (!load || !uid) return;
+    const confirmed = window.confirm("Mark this load as delivered? This can't be undone.");
+    if (!confirmed) return;
+
+    setUpdatingStatus(true);
+    try {
+      await updateDoc(doc(db, "shipments", load.id), {
+        status: "delivered",
+        completedAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+
+      // Bump the driver's completed trip count
+      await updateDoc(doc(db, "drivers", uid), {
+        completedTrips: increment(1),
+      });
+
+      await refreshLoad();
+    } catch (err) {
+      console.error(err);
+      alert("Failed to mark as delivered. Please try again.");
+    } finally {
+      setUpdatingStatus(false);
     }
   };
 
@@ -132,6 +268,7 @@ export default function LoadDetailPage() {
   }
 
   const hasImages = load.imageUrls && load.imageUrls.length > 0;
+  const isAssignedDriver = isCarrier && load.carrierId === uid;
 
   return (
     <div className="min-h-screen bg-slate-50 pb-12">
@@ -168,6 +305,9 @@ export default function LoadDetailPage() {
             )}
           </div>
         </div>
+
+        {/* Shipment Timeline — shown once a driver is assigned */}
+        {load.status !== "open" && <ShipmentTimeline load={load} />}
 
         {/* Cargo Photos */}
         <div className="bg-white rounded-3xl p-8 shadow border border-slate-100 mb-8">
@@ -270,7 +410,7 @@ export default function LoadDetailPage() {
           </div>
         </div>
 
-        {/* Accept Button */}
+        {/* Accept Button — only for undecided open loads */}
         {isCarrier && load.status === "open" && (
           <div className="flex justify-center mt-8">
             <button
@@ -280,6 +420,44 @@ export default function LoadDetailPage() {
             >
               {accepting ? "Accepting Load..." : "✅ Accept This Load"}
             </button>
+          </div>
+        )}
+
+        {/* Start Trip — assigned driver, matched but not yet started */}
+        {isAssignedDriver && load.status === "matched" && (
+          <div className="flex justify-center mt-8">
+            <button
+              onClick={handleStartTrip}
+              disabled={updatingStatus}
+              className="px-12 py-4 bg-blue-600 hover:bg-blue-700 text-white text-lg font-semibold rounded-2xl disabled:bg-gray-400 transition flex items-center gap-2"
+            >
+              <Truck className="w-5 h-5" />
+              {updatingStatus ? "Starting..." : "Start Trip"}
+            </button>
+          </div>
+        )}
+
+        {/* Mark Delivered — assigned driver, in transit */}
+        {isAssignedDriver && load.status === "in_transit" && (
+          <div className="flex justify-center mt-8">
+            <button
+              onClick={handleMarkDelivered}
+              disabled={updatingStatus}
+              className="px-12 py-4 bg-green-600 hover:bg-green-700 text-white text-lg font-semibold rounded-2xl disabled:bg-gray-400 transition flex items-center gap-2"
+            >
+              <Check className="w-5 h-5" />
+              {updatingStatus ? "Updating..." : "Mark Delivered"}
+            </button>
+          </div>
+        )}
+
+        {/* Delivered confirmation */}
+        {load.status === "delivered" && (
+          <div className="flex justify-center mt-8">
+            <div className="px-8 py-4 bg-green-50 text-green-700 rounded-2xl font-semibold flex items-center gap-2">
+              <Check className="w-5 h-5" />
+              Delivered
+            </div>
           </div>
         )}
       </div>
