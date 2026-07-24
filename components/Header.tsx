@@ -49,6 +49,21 @@ export default function Header() {
       <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
         {user ? (
           <>
+            <Link
+              href="/dashboard"
+              style={{
+                padding: "8px 16px",
+                background: "#eff6ff",
+                border: "1px solid #bfdbfe",
+                borderRadius: 8,
+                color: "#1d4ed8",
+                fontWeight: 600,
+                textDecoration: "none",
+                fontSize: 14,
+              }}
+            >
+              📊 Dashboard
+            </Link>
             <span style={{ fontSize: 14, color: "#475569" }}>
               Welcome, {user.email?.split("@")[0]}
             </span>
