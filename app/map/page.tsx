@@ -78,15 +78,26 @@ export default function MapPage() {
       const userRole = userSnap.data()?.role;
       setRole(userRole);
 
-      // Load relevant shipments
-      let q;
       if (userRole === "shipper") {
-        q = query(collection(db, "shipments"), where("shipperId", "==", user.uid));
+        // Shippers see all of their own shipments, regardless of status
+        const q = query(collection(db, "shipments"), where("shipperId", "==", user.uid));
+        const snap = await getDocs(q);
+        setShipments(snap.docs.map(d => ({ id: d.id, ...d.data() } as Shipment)));
       } else {
-        q = query(collection(db, "shipments"), where("status", "==", "open"));
+        // Drivers see two things: open marketplace loads AND their own
+        // accepted/active loads (which are no longer "open" once matched).
+        const openQ = query(collection(db, "shipments"), where("status", "==", "open"));
+        const myQ = query(collection(db, "shipments"), where("carrierId", "==", user.uid));
+
+        const [openSnap, mySnap] = await Promise.all([getDocs(openQ), getDocs(myQ)]);
+
+        const openLoads = openSnap.docs.map(d => ({ id: d.id, ...d.data() } as Shipment));
+        const myLoads = mySnap.docs.map(d => ({ id: d.id, ...d.data() } as Shipment));
+
+        // Merge and de-duplicate by id (a load can't be both, but just in case)
+        const merged = [...myLoads, ...openLoads.filter(o => !myLoads.some(m => m.id === o.id))];
+        setShipments(merged);
       }
-      const snap = await getDocs(q);
-      setShipments(snap.docs.map(d => ({ id: d.id, ...d.data() } as Shipment)));
     });
     return () => unsub();
   }, [router]);
@@ -264,6 +275,14 @@ export default function MapPage() {
                   Accept This Load →
                 </button>
               )}
+              {role === "driver" && selected.carrierId === uid && selected.status !== "open" && (
+                <button
+                  onClick={() => router.push(`/loads/${selected.id}`)}
+                  style={{ display: "block", width: "100%", marginTop: 14, padding: "10px", background: "#059669", color: "white", border: "none", borderRadius: 8, fontWeight: 600, cursor: "pointer", fontSize: 13 }}
+                >
+                  View My Load →
+                </button>
+              )}
             </div>
           )}
 
@@ -281,6 +300,7 @@ export default function MapPage() {
           ) : (
             shipments.map(s => {
               const hasCoords = getCoordsForCity(s.pickupCity) && getCoordsForCity(s.deliveryCity);
+              const isMine = role === "driver" && s.carrierId === uid;
               return (
                 <div
                   key={s.id}
@@ -289,6 +309,7 @@ export default function MapPage() {
                     padding: "12px 20px", cursor: "pointer",
                     borderBottom: "1px solid rgba(255,255,255,0.05)",
                     background: selected?.id === s.id ? "rgba(59,130,246,0.1)" : "transparent",
+                    borderLeft: isMine ? "3px solid #10b981" : "3px solid transparent",
                     transition: "background 0.15s",
                   }}
                 >
@@ -298,7 +319,10 @@ export default function MapPage() {
                         {s.pickupCity} → {s.deliveryCity}
                         {!hasCoords && <span style={{ fontSize: 10, color: "#475569", marginLeft: 6 }}>(no coords)</span>}
                       </div>
-                      {s.pickupDate && <div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>{s.pickupDate}</div>}
+                      <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 2 }}>
+                        {s.pickupDate && <div style={{ fontSize: 11, color: "#64748b" }}>{s.pickupDate}</div>}
+                        {isMine && <div style={{ fontSize: 10, color: "#10b981", fontWeight: 700 }}>MY LOAD</div>}
+                      </div>
                     </div>
                     <div style={{ width: 8, height: 8, borderRadius: "50%", background: STATUS_COLORS[s.status] ?? "#64748b", flexShrink: 0 }} />
                   </div>
