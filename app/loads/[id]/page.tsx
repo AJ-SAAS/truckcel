@@ -138,11 +138,11 @@ export default function LoadDetailPage() {
       <div className="max-w-3xl mx-auto px-4 pt-8">
         {/* Back Button */}
         <button
-          onClick={() => router.push("/browse-loads")}
+          onClick={() => router.back()}
           className="flex items-center gap-2 text-slate-500 hover:text-slate-700 mb-6"
         >
           <ArrowLeft className="w-5 h-5" />
-          Back to Loads
+          Back
         </button>
 
         {/* Header */}
