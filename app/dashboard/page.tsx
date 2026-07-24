@@ -417,11 +417,6 @@ export default function DashboardPage() {
     return () => unsub();
   }, [router]);
 
-  const handleSignOut = async () => {
-    await auth.signOut();
-    router.push("/login");
-  };
-
   if (authLoading) {
     return (
       <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#f8fafc" }}>
@@ -435,29 +430,6 @@ export default function DashboardPage() {
 
   return (
     <div style={{ minHeight: "100vh", background: "#f8fafc" }}>
-      {/* Top Navigation */}
-      <div style={{ background: "white", borderBottom: "1px solid #e5e7eb", padding: "0 24px" }}>
-        <div style={{ maxWidth: 1200, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", height: 64 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ width: 32, height: 32, background: "linear-gradient(135deg, #1d4ed8, #0891b2)", borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15 }}>🚛</div>
-            <span style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: 18, color: "#111827" }}>Truckcel</span>
-            <span style={{ marginLeft: 12, background: "#dbeafe", color: "#1d4ed8", fontSize: 11, fontWeight: 700, padding: "3px 8px", borderRadius: 10, letterSpacing: 0.5 }}>
-              {userData?.role?.toUpperCase()}
-            </span>
-          </div>
-
-          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-            <span style={{ fontSize: 14, color: "#6b7280" }}>{userData?.email}</span>
-            <button 
-              onClick={handleSignOut} 
-              style={{ padding: "8px 16px", border: "1px solid #d1d5db", borderRadius: 7, background: "white", color: "#374151", fontSize: 14, fontWeight: 500, cursor: "pointer" }}
-            >
-              Sign out
-            </button>
-          </div>
-        </div>
-      </div>
-
       {/* Main Content */}
       <div style={{ maxWidth: 1200, margin: "0 auto", padding: "36px 24px" }}>
         <div style={{ marginBottom: 28 }}>
