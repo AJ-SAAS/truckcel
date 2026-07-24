@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { doc, getDoc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
-import { MapPin, Package, Truck, DollarSign, Clock, ArrowLeft } from "lucide-react";
+import { MapPin, Package, Truck, DollarSign, Clock, ArrowLeft, ImageIcon } from "lucide-react";
 
 interface Shipment {
   id: string;
@@ -26,6 +26,7 @@ interface Shipment {
   status: string;
   shipperId: string;
   carrierId?: string;
+  imageUrls?: string[];
 }
 
 const CARGO_LABELS: Record<string, string> = {
@@ -48,6 +49,7 @@ export default function LoadDetailPage() {
   const [accepting, setAccepting] = useState(false);
   const [uid, setUid] = useState<string | null>(null);
   const [isCarrier, setIsCarrier] = useState(false);
+  const [activeImage, setActiveImage] = useState<string | null>(null);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (user) => {
@@ -76,7 +78,11 @@ export default function LoadDetailPage() {
         const docSnap = await getDoc(docRef);
 
         if (docSnap.exists()) {
-          setLoad({ id: docSnap.id, ...docSnap.data() } as Shipment);
+          const data = { id: docSnap.id, ...docSnap.data() } as Shipment;
+          setLoad(data);
+          if (data.imageUrls && data.imageUrls.length > 0) {
+            setActiveImage(data.imageUrls[0]);
+          }
         } else {
           alert("Load not found");
           router.push("/browse-loads");
@@ -125,6 +131,8 @@ export default function LoadDetailPage() {
     return <p>Load not found.</p>;
   }
 
+  const hasImages = load.imageUrls && load.imageUrls.length > 0;
+
   return (
     <div className="min-h-screen bg-slate-50 pb-12">
       <div className="max-w-3xl mx-auto px-4 pt-8">
@@ -159,6 +167,44 @@ export default function LoadDetailPage() {
               </div>
             )}
           </div>
+        </div>
+
+        {/* Cargo Photos */}
+        <div className="bg-white rounded-3xl p-8 shadow border border-slate-100 mb-8">
+          <div className="flex items-center gap-3 mb-6">
+            <ImageIcon className="w-6 h-6 text-purple-600" />
+            <h2 className="text-xl font-semibold">Cargo Photos</h2>
+          </div>
+
+          {hasImages ? (
+            <>
+              <div className="rounded-2xl overflow-hidden bg-slate-100 mb-4">
+                <img
+                  src={activeImage ?? load.imageUrls![0]}
+                  alt="Cargo"
+                  className="w-full max-h-[420px] object-contain"
+                />
+              </div>
+              {load.imageUrls!.length > 1 && (
+                <div className="grid grid-cols-5 gap-3">
+                  {load.imageUrls!.map((url, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => setActiveImage(url)}
+                      className={`rounded-xl overflow-hidden border-2 ${
+                        activeImage === url ? "border-blue-600" : "border-transparent"
+                      }`}
+                    >
+                      <img src={url} alt={`Cargo ${i + 1}`} className="w-full h-20 object-cover" />
+                    </button>
+                  ))}
+                </div>
+              )}
+            </>
+          ) : (
+            <p className="text-slate-400 text-sm">No photos were provided for this load.</p>
+          )}
         </div>
 
         {/* Cargo Info */}

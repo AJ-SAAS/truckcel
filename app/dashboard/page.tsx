@@ -154,11 +154,29 @@ function ShipperDashboard({ uid }: { uid: string }) {
         >
           + Post New Load
         </button>
+        <button
+          onClick={() => router.push("/my-loads")}
+          style={{ 
+            padding: "12px 24px", 
+            border: "1px solid #d1d5db", 
+            borderRadius: 8, 
+            background: "white", 
+            color: "#374151", 
+            fontWeight: 600, 
+            cursor: "pointer", 
+            fontSize: 15 
+          }}
+        >
+          📁 My Loads
+        </button>
       </div>
 
       <div style={{ background: "white", borderRadius: 12, border: "1px solid #e5e7eb", overflow: "hidden" }}>
-        <div style={{ padding: "20px 24px", borderBottom: "1px solid #e5e7eb" }}>
+        <div style={{ padding: "20px 24px", borderBottom: "1px solid #e5e7eb", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <h2 style={{ fontSize: 17, fontWeight: 700, color: "#111827" }}>Your Shipments</h2>
+          <span onClick={() => router.push("/my-loads")} style={{ fontSize: 13, color: "#1d4ed8", cursor: "pointer", fontWeight: 600 }}>
+            Manage all →
+          </span>
         </div>
 
         {loading ? (
@@ -209,13 +227,15 @@ function ShipperDashboard({ uid }: { uid: string }) {
             {shipments.map((s, i) => (
               <div 
                 key={s.id} 
+                onClick={() => router.push(`/loads/${s.id}`)}
                 style={{ 
                   display: "grid", 
                   gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr", 
                   gap: 12, 
                   padding: "16px 24px", 
                   borderBottom: i < shipments.length - 1 ? "1px solid #f1f5f9" : "none", 
-                  alignItems: "center" 
+                  alignItems: "center",
+                  cursor: "pointer",
                 }}
               >
                 <div>

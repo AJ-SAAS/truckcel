@@ -1,14 +1,14 @@
-// app/post-load/page.tsx
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
 import { useForm, type Resolver, type SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { auth, db, storage } from "@/lib/firebase";
-import { collection, addDoc, serverTimestamp, updateDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { onAuthStateChanged } from "firebase/auth";
 import { MapPin, Package, Truck, DollarSign, ArrowLeft, ImagePlus, X } from "lucide-react";
 
 const loadSchema = z.object({
@@ -51,11 +51,16 @@ const CARGO_TYPES = [
   { value: "other", label: "Other" },
 ];
 
-export default function PostLoadPage() {
+export default function EditLoadPage() {
+  const { id } = useParams();
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
-  const [images, setImages] = useState<File[]>([]);
+
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [uid, setUid] = useState<string | null>(null);
+
+  const [existingImageUrls, setExistingImageUrls] = useState<string[]>([]);
+  const [newImages, setNewImages] = useState<File[]>([]);
 
   const {
     register,
@@ -64,23 +69,98 @@ export default function PostLoadPage() {
     reset,
   } = useForm<LoadForm>({
     resolver: zodResolver(loadSchema) as Resolver<LoadForm>,
-    defaultValues: { paymentTerms: "on_delivery" },
   });
+
+  // Auth check
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        router.push("/login");
+        return;
+      }
+      setUid(user.uid);
+    });
+    return () => unsub();
+  }, [router]);
+
+  // Load existing shipment data
+  useEffect(() => {
+    if (!id || !uid) return;
+
+    const fetchLoad = async () => {
+      try {
+        const docRef = doc(db, "shipments", id as string);
+        const docSnap = await getDoc(docRef);
+
+        if (!docSnap.exists()) {
+          alert("Load not found.");
+          router.push("/my-loads");
+          return;
+        }
+
+        const data = docSnap.data();
+
+        if (data.shipperId !== uid) {
+          alert("You don't have permission to edit this load.");
+          router.push("/my-loads");
+          return;
+        }
+
+        if (data.status !== "open") {
+          alert("This load can no longer be edited — a driver has already accepted it.");
+          router.push("/my-loads");
+          return;
+        }
+
+        reset({
+          pickupCity: data.pickupCity,
+          pickupAddress: data.pickupAddress,
+          deliveryCity: data.deliveryCity,
+          deliveryAddress: data.deliveryAddress,
+          pickupDate: data.pickupDate,
+          deliveryDate: data.deliveryDate,
+          cargoType: data.cargoType,
+          cargoDescription: data.cargoDescription,
+          weightKg: data.weightKg,
+          pallets: data.pallets,
+          truckType: data.truckType,
+          budgetUSD: data.budgetUSD,
+          paymentTerms: data.paymentTerms,
+          specialInstructions: data.specialInstructions,
+        });
+
+        setExistingImageUrls(data.imageUrls || []);
+      } catch (err) {
+        console.error(err);
+        alert("Error loading shipment.");
+        router.push("/my-loads");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchLoad();
+  }, [id, uid, reset, router]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const newFiles = Array.from(e.target.files);
-      setImages(prev => [...prev, ...newFiles].slice(0, 5)); // Max 5 photos
+      const totalSlots = 5 - existingImageUrls.length;
+      setNewImages((prev) => [...prev, ...newFiles].slice(0, Math.max(totalSlots, 0)));
     }
   };
 
-  const removeImage = (index: number) => {
-    setImages(prev => prev.filter((_, i) => i !== index));
+  const removeExistingImage = (url: string) => {
+    setExistingImageUrls((prev) => prev.filter((u) => u !== url));
   };
 
-  const uploadImages = async (loadId: string): Promise<string[]> => {
+  const removeNewImage = (index: number) => {
+    setNewImages((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const uploadNewImages = async (loadId: string): Promise<string[]> => {
     const urls: string[] = [];
-    for (const file of images) {
+    for (const file of newImages) {
       const fileName = `${Date.now()}-${file.name.replace(/\s+/g, "-")}`;
       const storageRef = ref(storage, `loads/${loadId}/${fileName}`);
       await uploadBytes(storageRef, file);
@@ -91,89 +171,57 @@ export default function PostLoadPage() {
   };
 
   const onSubmit: SubmitHandler<LoadForm> = async (data) => {
-    const user = auth.currentUser;
-    if (!user) {
-      alert("❌ You must be logged in to post a load.");
-      router.push("/login");
-      return;
-    }
-
-    setLoading(true);
+    if (!id) return;
+    setSaving(true);
 
     try {
-      // Save to Firestore
-      const docRef = await addDoc(collection(db, "shipments"), {
-        ...data,
-        shipperId: user.uid,
-        status: "open",
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-        imageUrls: [], // Will be updated if images are uploaded
-      });
+      let finalImageUrls = [...existingImageUrls];
 
-      // Upload images if any, then save their URLs back to the shipment doc
-      if (images.length > 0) {
-        const imageUrls = await uploadImages(docRef.id);
-        await updateDoc(docRef, { imageUrls });
-        console.log("✅ Photos uploaded and saved:", imageUrls);
+      if (newImages.length > 0) {
+        const uploaded = await uploadNewImages(id as string);
+        finalImageUrls = [...finalImageUrls, ...uploaded];
       }
 
-      console.log("✅ Load posted successfully! ID:", docRef.id);
-      
-      setSuccess(true);
-      reset({ paymentTerms: "on_delivery" });
-      setImages([]);
+      await updateDoc(doc(db, "shipments", id as string), {
+        ...data,
+        imageUrls: finalImageUrls,
+        updatedAt: serverTimestamp(),
+      });
 
+      alert("✅ Load updated successfully!");
+      router.push("/my-loads");
     } catch (err: any) {
-      console.error("🚨 Post Load Error:", err);
-      alert(`Failed to post load: ${err.message || "Unknown error. Please try again."}`);
+      console.error("🚨 Edit Load Error:", err);
+      alert(`Failed to update load: ${err.message || "Unknown error. Please try again."}`);
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
-  // Success Screen
-  if (success) {
+  if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-3xl p-10 max-w-lg w-full text-center shadow-xl">
-          <div className="text-7xl mb-6">🚛</div>
-          <h2 className="text-3xl font-bold text-slate-900 mb-3">Load Posted Successfully!</h2>
-          <p className="text-slate-600 mb-8">
-            Your shipment is now visible to drivers.
-          </p>
-
-          <div className="flex gap-4 justify-center">
-            <button
-              onClick={() => setSuccess(false)}
-              className="px-8 py-3.5 border border-slate-300 rounded-2xl font-semibold hover:bg-slate-50"
-            >
-              Post Another Load
-            </button>
-            <button
-              onClick={() => router.push("/dashboard")}
-              className="px-8 py-3.5 bg-blue-600 text-white rounded-2xl font-semibold hover:bg-blue-700"
-            >
-              Go to Dashboard
-            </button>
-          </div>
-        </div>
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <p className="text-slate-500">Loading load details...</p>
       </div>
     );
   }
+
+  const totalPhotoCount = existingImageUrls.length + newImages.length;
 
   return (
     <div className="min-h-screen bg-slate-50 py-10 px-4">
       <div className="max-w-3xl mx-auto">
         <button
-          onClick={() => router.back()}
+          onClick={() => router.push("/my-loads")}
           className="flex items-center gap-2 text-slate-500 hover:text-slate-700 mb-6 font-medium"
         >
-          <ArrowLeft className="w-5 h-5" /> Back
+          <ArrowLeft className="w-5 h-5" /> Back to My Loads
         </button>
 
-        <h1 className="text-4xl font-bold text-slate-900 mb-2">Post a New Load</h1>
-        <p className="text-slate-600 mb-10">Fill in the shipment details. Drivers will be able to see and accept it.</p>
+        <h1 className="text-4xl font-bold text-slate-900 mb-2">Edit Load</h1>
+        <p className="text-slate-600 mb-10">
+          Update the shipment details below. Changes are only allowed while the load is still Open.
+        </p>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-10">
           {/* Route Section */}
@@ -298,34 +346,83 @@ export default function PostLoadPage() {
               <h2 className="text-xl font-semibold">Cargo Photos (Recommended)</h2>
             </div>
 
-            <input type="file" multiple accept="image/*" onChange={handleImageChange} className="hidden" id="cargo-photos" />
-            <label htmlFor="cargo-photos" className="border-2 border-dashed border-slate-300 rounded-2xl p-8 flex flex-col items-center justify-center cursor-pointer hover:border-blue-400">
-              <ImagePlus className="w-12 h-12 text-slate-400 mb-3" />
-              <p className="font-medium">Upload photos of the cargo</p>
-              <p className="text-sm text-slate-500 mt-1">Max 5 images • Helps carriers understand the load</p>
-            </label>
+            {existingImageUrls.length > 0 && (
+              <div className="mb-6">
+                <p className="text-sm font-medium text-slate-600 mb-3">Current photos</p>
+                <div className="grid grid-cols-5 gap-3">
+                  {existingImageUrls.map((url, index) => (
+                    <div key={index} className="relative group">
+                      <img src={url} alt="cargo" className="w-full h-24 object-cover rounded-xl" />
+                      <button
+                        type="button"
+                        onClick={() => removeExistingImage(url)}
+                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
-            {images.length > 0 && (
-              <div className="grid grid-cols-5 gap-3 mt-6">
-                {images.map((file, index) => (
-                  <div key={index} className="relative group">
-                    <img src={URL.createObjectURL(file)} alt="preview" className="w-full h-24 object-cover rounded-xl" />
-                    <button type="button" onClick={() => removeImage(index)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1">
-                      <X size={14} />
-                    </button>
-                  </div>
-                ))}
+            {totalPhotoCount < 5 && (
+              <>
+                <input
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  className="hidden"
+                  id="cargo-photos"
+                />
+                <label
+                  htmlFor="cargo-photos"
+                  className="border-2 border-dashed border-slate-300 rounded-2xl p-8 flex flex-col items-center justify-center cursor-pointer hover:border-blue-400"
+                >
+                  <ImagePlus className="w-12 h-12 text-slate-400 mb-3" />
+                  <p className="font-medium">Upload more photos</p>
+                  <p className="text-sm text-slate-500 mt-1">Max 5 images total • Helps carriers understand the load</p>
+                </label>
+              </>
+            )}
+
+            {newImages.length > 0 && (
+              <div className="mt-6">
+                <p className="text-sm font-medium text-slate-600 mb-3">New photos to upload</p>
+                <div className="grid grid-cols-5 gap-3">
+                  {newImages.map((file, index) => (
+                    <div key={index} className="relative group">
+                      <img src={URL.createObjectURL(file)} alt="preview" className="w-full h-24 object-cover rounded-xl" />
+                      <button
+                        type="button"
+                        onClick={() => removeNewImage(index)}
+                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>
 
           {/* Submit */}
           <div className="flex justify-end gap-4 pt-6">
-            <button type="button" onClick={() => router.back()} className="px-8 py-3.5 border border-slate-300 rounded-2xl font-semibold hover:bg-slate-50">
+            <button
+              type="button"
+              onClick={() => router.push("/my-loads")}
+              className="px-8 py-3.5 border border-slate-300 rounded-2xl font-semibold hover:bg-slate-50"
+            >
               Cancel
             </button>
-            <button type="submit" disabled={loading} className="px-10 py-3.5 bg-blue-600 text-white rounded-2xl font-semibold disabled:bg-blue-400 hover:bg-blue-700 transition">
-              {loading ? "Posting Load..." : "Post Load →"}
+            <button
+              type="submit"
+              disabled={saving}
+              className="px-10 py-3.5 bg-blue-600 text-white rounded-2xl font-semibold disabled:bg-blue-400 hover:bg-blue-700 transition"
+            >
+              {saving ? "Saving Changes..." : "Save Changes"}
             </button>
           </div>
         </form>
