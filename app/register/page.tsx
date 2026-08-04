@@ -7,6 +7,25 @@ import { createUserWithEmailAndPassword } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 
+// ── Design tokens ────────────────────────────────────────────────────────
+// Same values as app/dashboard/page.tsx — keep these two files in sync,
+// or better, move this into a shared /lib/theme.ts and import it everywhere.
+const theme = {
+  font: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+  page: "#ffffff",
+  surface: "#ffffff",
+  surfaceMuted: "#f8fafc",
+  border: "#e5e7eb",
+  textPrimary: "#111827",
+  textSecondary: "#6b7280",
+  textMuted: "#9ca3af",
+  accent: "#2563eb",
+  accentHover: "#1d4ed8",
+  accentText: "#1d4ed8",
+  danger: "#b91c1c",
+  dangerBg: "#fef2f2",
+};
+
 export default function RegisterPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -36,20 +55,16 @@ export default function RegisterPage() {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // Save user data in Firestore
       await setDoc(doc(db, "users", user.uid), {
         email: user.email,
         role,
         createdAt: new Date().toISOString(),
       });
 
-      alert("Account created! Welcome to Truckcel 🎉");
-
-      // ✅ Fixed Redirect Logic
       if (role === "driver") {
-        router.push("/onboarding/driver");   // or /dashboard if you don't have onboarding yet
+        router.push("/onboarding/driver");
       } else {
-        router.push("/dashboard");           // Shipper goes straight to dashboard
+        router.push("/dashboard");
       }
     } catch (err: any) {
       console.error("Sign-up error:", err);
@@ -67,136 +82,167 @@ export default function RegisterPage() {
     }
   };
 
+  const inputStyle: React.CSSProperties = {
+    width: "100%",
+    padding: "10px 12px",
+    border: `1px solid ${theme.border}`,
+    borderRadius: 8,
+    fontSize: 15,
+    color: theme.textPrimary,
+    fontFamily: theme.font,
+    outline: "none",
+  };
+
+  const labelStyle: React.CSSProperties = {
+    display: "block",
+    marginBottom: 6,
+    fontWeight: 500,
+    fontSize: 14,
+    color: theme.textPrimary,
+  };
+
   return (
-    <div style={{
-      maxWidth: "420px",
-      margin: "80px auto",
-      padding: "32px 24px",
-      background: "white",
-      borderRadius: "16px",
-      boxShadow: "0 10px 30px rgba(0,0,0,0.08)",
-    }}>
-      <h1 style={{
-        fontFamily: "'Syne', sans-serif",
-        fontWeight: 800,
-        fontSize: "28px",
-        marginBottom: "8px",
-        textAlign: "center",
-      }}>
-        Join Truckcel
-      </h1>
-      <p style={{
-        color: "#64748b",
-        textAlign: "center",
-        marginBottom: "32px",
-      }}>
-        Start earning or shipping smarter today
-      </p>
-
-      {error && (
-        <p style={{
-          color: "#ef4444",
-          background: "#fef2f2",
-          padding: "12px",
-          borderRadius: "8px",
-          marginBottom: "20px",
-          textAlign: "center",
-        }}>
-          {error}
-        </p>
-      )}
-
-      <form onSubmit={handleSignUp}>
-        <div style={{ marginBottom: "20px" }}>
-          <label style={{ display: "block", marginBottom: "6px", fontWeight: 600 }}>Email</label>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            placeholder="you@example.com"
-            style={{
-              width: "100%",
-              padding: "12px",
-              border: "1px solid #e2e8f0",
-              borderRadius: "8px",
-              fontSize: "16px",
-            }}
-          />
-        </div>
-
-        <div style={{ marginBottom: "20px" }}>
-          <label style={{ display: "block", marginBottom: "6px", fontWeight: 600 }}>Password</label>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            minLength={6}
-            placeholder="At least 6 characters"
-            style={{
-              width: "100%",
-              padding: "12px",
-              border: "1px solid #e2e8f0",
-              borderRadius: "8px",
-              fontSize: "16px",
-            }}
-          />
-        </div>
-
-        <div style={{ marginBottom: "32px" }}>
-          <label style={{ display: "block", marginBottom: "8px", fontWeight: 600 }}>I am a...</label>
-          <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-            <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer" }}>
-              <input
-                type="radio"
-                name="role"
-                value="driver"
-                checked={role === "driver"}
-                onChange={() => setRole("driver")}
-                style={{ accentColor: "#1d4ed8" }}
-              />
-              Driver / Truck owner
-            </label>
-            <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer" }}>
-              <input
-                type="radio"
-                name="role"
-                value="shipper"
-                checked={role === "shipper"}
-                onChange={() => setRole("shipper")}
-                style={{ accentColor: "#1d4ed8" }}
-              />
-              Shipper / Company
-            </label>
-          </div>
-        </div>
-
-        <button
-          type="submit"
-          disabled={loading}
+    <div
+      style={{
+        minHeight: "100vh",
+        background: theme.page,
+        fontFamily: theme.font,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "24px",
+      }}
+    >
+      <div
+        style={{
+          width: "100%",
+          maxWidth: 400,
+          padding: "32px 28px",
+          background: theme.surface,
+          borderRadius: 12,
+          border: `1px solid ${theme.border}`,
+        }}
+      >
+        <h1
           style={{
-            width: "100%",
-            padding: "14px",
-            background: loading ? "#a5b4fc" : "#1d4ed8",
-            color: "white",
-            border: "none",
-            borderRadius: "10px",
-            fontSize: "16px",
-            fontWeight: 600,
-            cursor: loading ? "not-allowed" : "pointer",
+            fontSize: 22,
+            fontWeight: 500,
+            color: theme.textPrimary,
+            marginBottom: 6,
+            textAlign: "center",
           }}
         >
-          {loading ? "Creating account..." : "Create account"}
-        </button>
-      </form>
+          Join FTLcargo
+        </h1>
+        <p style={{ color: theme.textSecondary, fontSize: 14, textAlign: "center", marginBottom: 28 }}>
+          Start earning or shipping smarter today
+        </p>
 
-      <p style={{ marginTop: "24px", textAlign: "center", color: "#64748b" }}>
-        Already have an account?{" "}
-        <a href="/login" style={{ color: "#1d4ed8", fontWeight: 600 }}>
-          Log in
-        </a>
-      </p>
+        {error && (
+          <p
+            style={{
+              color: theme.danger,
+              background: theme.dangerBg,
+              padding: "10px 12px",
+              borderRadius: 8,
+              marginBottom: 18,
+              textAlign: "center",
+              fontSize: 13,
+            }}
+          >
+            {error}
+          </p>
+        )}
+
+        <form onSubmit={handleSignUp}>
+          <div style={{ marginBottom: 18 }}>
+            <label style={labelStyle}>Email</label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              placeholder="you@example.com"
+              style={inputStyle}
+            />
+          </div>
+
+          <div style={{ marginBottom: 18 }}>
+            <label style={labelStyle}>Password</label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              minLength={6}
+              placeholder="At least 6 characters"
+              style={inputStyle}
+            />
+          </div>
+
+          <div style={{ marginBottom: 28 }}>
+            <label style={labelStyle}>I am a...</label>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 8 }}>
+              {[
+                { value: "driver", label: "Driver / Truck owner" },
+                { value: "shipper", label: "Shipper / Company" },
+              ].map((option) => (
+                <label
+                  key={option.value}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    padding: "10px 12px",
+                    border: `1px solid ${role === option.value ? theme.accent : theme.border}`,
+                    borderRadius: 8,
+                    cursor: "pointer",
+                    fontSize: 14,
+                    color: theme.textPrimary,
+                    background: role === option.value ? "#eff6ff" : theme.surface,
+                  }}
+                >
+                  <input
+                    type="radio"
+                    name="role"
+                    value={option.value}
+                    checked={role === option.value}
+                    onChange={() => setRole(option.value as "driver" | "shipper")}
+                    style={{ accentColor: theme.accent }}
+                  />
+                  {option.label}
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            style={{
+              width: "100%",
+              padding: "11px",
+              background: loading ? "#93b4f0" : theme.accent,
+              color: "#ffffff",
+              border: "none",
+              borderRadius: 8,
+              fontSize: 15,
+              fontWeight: 500,
+              cursor: loading ? "not-allowed" : "pointer",
+              fontFamily: theme.font,
+            }}
+          >
+            {loading ? "Creating account..." : "Create account"}
+          </button>
+        </form>
+
+        <p style={{ marginTop: 22, textAlign: "center", color: theme.textSecondary, fontSize: 14 }}>
+          Already have an account?{" "}
+          <a href="/login" style={{ color: theme.accentText, fontWeight: 500, textDecoration: "none" }}>
+            Log in
+          </a>
+        </p>
+      </div>
     </div>
   );
 }

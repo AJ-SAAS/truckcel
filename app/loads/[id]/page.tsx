@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { doc, getDoc, updateDoc, serverTimestamp, increment } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
-import { MapPin, Package, Truck, DollarSign, Clock, ArrowLeft, ImageIcon, Check } from "lucide-react";
+import { MapPin, Package, Truck, Clock, ArrowLeft, ImageIcon, Check } from "lucide-react";
 
 interface Shipment {
   id: string;
@@ -34,13 +34,13 @@ interface Shipment {
 }
 
 const CARGO_LABELS: Record<string, string> = {
-  general: "General Freight",
-  perishable: "Perishable / Food",
-  hazmat: "Hazardous Materials",
-  oversized: "Oversized / Heavy",
+  general: "General freight",
+  perishable: "Perishable / food",
+  hazmat: "Hazardous materials",
+  oversized: "Oversized / heavy",
   automotive: "Automotive",
   electronics: "Electronics",
-  construction: "Construction Materials",
+  construction: "Construction materials",
   other: "Other",
 };
 
@@ -55,11 +55,38 @@ function formatTimestamp(ts: any): string {
   if (!ts) return "";
   try {
     const date = ts.toDate ? ts.toDate() : new Date(ts);
-    return date.toLocaleDateString(undefined, { month: "short", day: "numeric" }) +
-      " · " + date.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+    return (
+      date.toLocaleDateString(undefined, { month: "short", day: "numeric" }) +
+      " · " +
+      date.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })
+    );
   } catch {
     return "";
   }
+}
+
+// Shared card wrapper so every section on this page carries the same
+// radius, border, and padding.
+function Section({ children }: { children: React.ReactNode }) {
+  return <div className="bg-white rounded-xl p-6 border border-gray-200 mb-6">{children}</div>;
+}
+
+function SectionHeading({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <div className="flex items-center gap-2.5 mb-5">
+      {icon}
+      <h2 className="text-base font-medium text-gray-900">{children}</h2>
+    </div>
+  );
+}
+
+function Field({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div>
+      <p className="text-xs text-gray-500">{label}</p>
+      <p className="font-medium text-gray-900 mt-0.5">{value}</p>
+    </div>
+  );
 }
 
 function ShipmentTimeline({ load }: { load: Shipment }) {
@@ -72,18 +99,18 @@ function ShipmentTimeline({ load }: { load: Shipment }) {
 
   if (load.status === "cancelled") {
     return (
-      <div className="bg-white rounded-3xl p-8 shadow border border-slate-100 mb-8">
+      <Section>
         <div className="flex items-center gap-3">
-          <span className="w-3 h-3 rounded-full bg-red-500" />
-          <p className="font-medium text-slate-700">This load was cancelled by the shipper.</p>
+          <span className="w-2.5 h-2.5 rounded-full bg-red-500" />
+          <p className="font-medium text-gray-700">This load was cancelled by the shipper.</p>
         </div>
-      </div>
+      </Section>
     );
   }
 
   return (
-    <div className="bg-white rounded-3xl p-8 shadow border border-slate-100 mb-8">
-      <h2 className="text-xl font-semibold mb-6">Shipment timeline</h2>
+    <Section>
+      <h2 className="text-base font-medium text-gray-900 mb-5">Shipment timeline</h2>
       <div className="space-y-0">
         {TIMELINE_STEPS.map((step, i) => {
           const isDone = step.statuses.includes(load.status);
@@ -93,31 +120,29 @@ function ShipmentTimeline({ load }: { load: Shipment }) {
             <div key={step.key} className="flex gap-4">
               <div className="flex flex-col items-center">
                 <div
-                  className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
-                    isDone ? "bg-green-600" : "bg-slate-200"
+                  className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${
+                    isDone ? "bg-green-600" : "bg-gray-200"
                   }`}
                 >
                   {isDone ? (
-                    <Check className="w-4 h-4 text-white" />
+                    <Check className="w-3.5 h-3.5 text-white" />
                   ) : (
-                    <span className="w-2 h-2 rounded-full bg-slate-400" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
                   )}
                 </div>
                 {!isLast && (
-                  <div className={`w-0.5 flex-1 min-h-[28px] ${isDone ? "bg-green-600" : "bg-slate-200"}`} />
+                  <div className={`w-0.5 flex-1 min-h-[26px] ${isDone ? "bg-green-600" : "bg-gray-200"}`} />
                 )}
               </div>
-              <div className="pb-8">
-                <p className={`font-medium ${isDone ? "text-slate-900" : "text-slate-400"}`}>{step.label}</p>
-                {isDone && ts && (
-                  <p className="text-xs text-slate-400 mt-0.5">{formatTimestamp(ts)}</p>
-                )}
+              <div className="pb-6">
+                <p className={`text-sm font-medium ${isDone ? "text-gray-900" : "text-gray-400"}`}>{step.label}</p>
+                {isDone && ts && <p className="text-xs text-gray-400 mt-0.5">{formatTimestamp(ts)}</p>}
               </div>
             </div>
           );
         })}
       </div>
-    </div>
+    </Section>
   );
 }
 
@@ -132,6 +157,7 @@ export default function LoadDetailPage() {
   const [uid, setUid] = useState<string | null>(null);
   const [isCarrier, setIsCarrier] = useState(false);
   const [activeImage, setActiveImage] = useState<string | null>(null);
+  const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (user) => {
@@ -150,7 +176,6 @@ export default function LoadDetailPage() {
     return () => unsub();
   }, [router]);
 
-  // Fetch load details
   useEffect(() => {
     if (!id) return;
 
@@ -166,19 +191,22 @@ export default function LoadDetailPage() {
             setActiveImage(data.imageUrls[0]);
           }
         } else {
-          alert("Load not found");
-          router.push("/browse-loads");
+          setNotFound(true);
         }
       } catch (err) {
         console.error(err);
-        alert("Error loading shipment details");
+        setNotFound(true);
       } finally {
         setLoading(false);
       }
     };
 
     fetchLoad();
-  }, [id, router]);
+  }, [id]);
+
+  useEffect(() => {
+    if (notFound) router.push("/browse-loads");
+  }, [notFound, router]);
 
   const refreshLoad = async () => {
     if (!id) return;
@@ -190,7 +218,6 @@ export default function LoadDetailPage() {
 
   const handleAccept = async () => {
     if (!uid || !load) return;
-
     setAccepting(true);
     try {
       await updateDoc(doc(db, "shipments", load.id), {
@@ -199,12 +226,9 @@ export default function LoadDetailPage() {
         matchedAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
-
       await refreshLoad();
-      alert("🎉 Load accepted successfully!");
     } catch (err) {
       console.error(err);
-      alert("Failed to accept load. Please try again.");
     } finally {
       setAccepting(false);
     }
@@ -222,7 +246,6 @@ export default function LoadDetailPage() {
       await refreshLoad();
     } catch (err) {
       console.error(err);
-      alert("Failed to update trip status. Please try again.");
     } finally {
       setUpdatingStatus(false);
     }
@@ -241,7 +264,6 @@ export default function LoadDetailPage() {
         updatedAt: serverTimestamp(),
       });
 
-      // Bump the driver's completed trip count
       await updateDoc(doc(db, "drivers", uid), {
         completedTrips: increment(1),
       });
@@ -249,7 +271,6 @@ export default function LoadDetailPage() {
       await refreshLoad();
     } catch (err) {
       console.error(err);
-      alert("Failed to mark as delivered. Please try again.");
     } finally {
       setUpdatingStatus(false);
     }
@@ -257,39 +278,36 @@ export default function LoadDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <p className="text-slate-500">Loading load details...</p>
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <p className="text-gray-400 text-sm">Loading load details...</p>
       </div>
     );
   }
 
-  if (!load) {
-    return <p>Load not found.</p>;
-  }
+  if (!load) return null;
 
   const hasImages = load.imageUrls && load.imageUrls.length > 0;
   const isAssignedDriver = isCarrier && load.carrierId === uid;
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-12">
+    <div className="min-h-screen bg-white pb-16 font-sans">
       <div className="max-w-3xl mx-auto px-4 pt-8">
-        {/* Back Button */}
         <button
           onClick={() => router.back()}
-          className="flex items-center gap-2 text-slate-500 hover:text-slate-700 mb-6"
+          className="flex items-center gap-2 text-gray-500 hover:text-gray-800 mb-6 text-sm"
         >
-          <ArrowLeft className="w-5 h-5" />
+          <ArrowLeft className="w-4 h-4" />
           Back
         </button>
 
         {/* Header */}
-        <div className="bg-white rounded-3xl p-8 shadow border border-slate-100 mb-8">
+        <Section>
           <div className="flex justify-between items-start">
             <div>
-              <div className="text-3xl font-bold text-slate-900 flex items-center gap-3">
+              <div className="text-2xl font-medium text-gray-900 flex items-center gap-3">
                 {load.pickupCity} <span className="text-blue-600">→</span> {load.deliveryCity}
               </div>
-              <div className="text-slate-500 mt-2 flex items-center gap-2">
+              <div className="text-gray-500 mt-2 flex items-center gap-2 text-sm">
                 <Clock className="w-4 h-4" />
                 Pickup: {load.pickupDate || "Flexible"}
               </div>
@@ -297,28 +315,22 @@ export default function LoadDetailPage() {
 
             {load.budgetUSD && (
               <div className="text-right">
-                <div className="text-4xl font-bold text-blue-600">€{load.budgetUSD}</div>
-                <div className="text-sm text-slate-500">
-                  {load.paymentTerms?.replace("_", " ")}
-                </div>
+                <div className="text-3xl font-medium text-blue-600">€{load.budgetUSD}</div>
+                <div className="text-sm text-gray-500 capitalize">{load.paymentTerms?.replace("_", " ")}</div>
               </div>
             )}
           </div>
-        </div>
+        </Section>
 
-        {/* Shipment Timeline — shown once a driver is assigned */}
         {load.status !== "open" && <ShipmentTimeline load={load} />}
 
-        {/* Cargo Photos */}
-        <div className="bg-white rounded-3xl p-8 shadow border border-slate-100 mb-8">
-          <div className="flex items-center gap-3 mb-6">
-            <ImageIcon className="w-6 h-6 text-purple-600" />
-            <h2 className="text-xl font-semibold">Cargo Photos</h2>
-          </div>
+        {/* Cargo photos */}
+        <Section>
+          <SectionHeading icon={<ImageIcon className="w-5 h-5 text-gray-400" />}>Cargo photos</SectionHeading>
 
           {hasImages ? (
             <>
-              <div className="rounded-2xl overflow-hidden bg-slate-100 mb-4">
+              <div className="rounded-lg overflow-hidden bg-gray-50 mb-3">
                 <img
                   src={activeImage ?? load.imageUrls![0]}
                   alt="Cargo"
@@ -326,13 +338,13 @@ export default function LoadDetailPage() {
                 />
               </div>
               {load.imageUrls!.length > 1 && (
-                <div className="grid grid-cols-5 gap-3">
+                <div className="grid grid-cols-5 gap-2.5">
                   {load.imageUrls!.map((url, i) => (
                     <button
                       key={i}
                       type="button"
                       onClick={() => setActiveImage(url)}
-                      className={`rounded-xl overflow-hidden border-2 ${
+                      className={`rounded-md overflow-hidden border-2 ${
                         activeImage === url ? "border-blue-600" : "border-transparent"
                       }`}
                     >
@@ -343,119 +355,111 @@ export default function LoadDetailPage() {
               )}
             </>
           ) : (
-            <p className="text-slate-400 text-sm">No photos were provided for this load.</p>
+            <p className="text-gray-400 text-sm">No photos were provided for this load.</p>
           )}
-        </div>
+        </Section>
 
-        {/* Cargo Info */}
-        <div className="bg-white rounded-3xl p-8 shadow border border-slate-100 mb-8">
-          <div className="flex items-center gap-3 mb-6">
-            <Package className="w-6 h-6 text-amber-600" />
-            <h2 className="text-xl font-semibold">Cargo Information</h2>
-          </div>
+        {/* Cargo info */}
+        <Section>
+          <SectionHeading icon={<Package className="w-5 h-5 text-gray-400" />}>Cargo information</SectionHeading>
 
-          <div className="grid grid-cols-2 gap-y-6">
-            <div>
-              <p className="text-xs text-slate-500 font-medium">CARGO TYPE</p>
-              <p className="font-medium">{CARGO_LABELS[load.cargoType || ""] || load.cargoType}</p>
-            </div>
-            <div>
-              <p className="text-xs text-slate-500 font-medium">WEIGHT</p>
-              <p className="font-medium">{load.weightKg?.toLocaleString() || "—"} kg</p>
-            </div>
-            <div>
-              <p className="text-xs text-slate-500 font-medium">PALLETS</p>
-              <p className="font-medium">{load.pallets || "—"}</p>
-            </div>
-            <div>
-              <p className="text-xs text-slate-500 font-medium">PREFERRED TRUCK</p>
-              <p className="font-medium capitalize">{load.truckType || "Any"}</p>
-            </div>
+          <div className="grid grid-cols-2 gap-y-5 text-sm">
+            <Field label="Cargo type" value={CARGO_LABELS[load.cargoType || ""] || load.cargoType || "—"} />
+            <Field label="Weight" value={`${load.weightKg?.toLocaleString() || "—"} kg`} />
+            <Field label="Pallets" value={load.pallets || "—"} />
+            <Field label="Preferred truck" value={<span className="capitalize">{load.truckType || "Any"}</span>} />
           </div>
 
           {load.cargoDescription && (
-            <div className="mt-8">
-              <p className="text-xs text-slate-500 font-medium mb-2">DESCRIPTION</p>
-              <p className="text-slate-700 leading-relaxed">{load.cargoDescription}</p>
+            <div className="mt-6">
+              <p className="text-xs text-gray-500 mb-1.5">Description</p>
+              <p className="text-gray-700 text-sm leading-relaxed">{load.cargoDescription}</p>
             </div>
           )}
-        </div>
+        </Section>
 
-        {/* Route & Instructions */}
-        <div className="bg-white rounded-3xl p-8 shadow border border-slate-100 mb-8">
-          <div className="flex items-center gap-3 mb-6">
-            <MapPin className="w-6 h-6 text-blue-600" />
-            <h2 className="text-xl font-semibold">Route & Instructions</h2>
-          </div>
+        {/* Route & instructions */}
+        <Section>
+          <SectionHeading icon={<MapPin className="w-5 h-5 text-gray-400" />}>Route and instructions</SectionHeading>
 
-          <div className="space-y-6">
-            <div>
-              <p className="text-xs text-slate-500 font-medium">PICKUP</p>
-              <p className="font-medium">{load.pickupCity}</p>
-              {load.pickupAddress && <p className="text-slate-600">{load.pickupAddress}</p>}
-            </div>
-
-            <div>
-              <p className="text-xs text-slate-500 font-medium">DELIVERY</p>
-              <p className="font-medium">{load.deliveryCity}</p>
-              {load.deliveryAddress && <p className="text-slate-600">{load.deliveryAddress}</p>}
-            </div>
+          <div className="space-y-5 text-sm">
+            <Field
+              label="Pickup"
+              value={
+                <>
+                  {load.pickupCity}
+                  {load.pickupAddress && <span className="block text-gray-500 font-normal">{load.pickupAddress}</span>}
+                </>
+              }
+            />
+            <Field
+              label="Delivery"
+              value={
+                <>
+                  {load.deliveryCity}
+                  {load.deliveryAddress && (
+                    <span className="block text-gray-500 font-normal">{load.deliveryAddress}</span>
+                  )}
+                </>
+              }
+            />
 
             {load.specialInstructions && (
               <div>
-                <p className="text-xs text-slate-500 font-medium">SPECIAL INSTRUCTIONS</p>
-                <p className="text-slate-700 leading-relaxed">{load.specialInstructions}</p>
+                <p className="text-xs text-gray-500 mb-1.5">Special instructions</p>
+                <p className="text-gray-700 leading-relaxed">{load.specialInstructions}</p>
               </div>
             )}
           </div>
-        </div>
+        </Section>
 
-        {/* Accept Button — only for undecided open loads */}
+        {/* Accept — undecided open loads */}
         {isCarrier && load.status === "open" && (
-          <div className="flex justify-center mt-8">
+          <div className="flex justify-center mt-6">
             <button
               onClick={handleAccept}
               disabled={accepting}
-              className="px-12 py-4 bg-green-600 hover:bg-green-700 text-white text-lg font-semibold rounded-2xl disabled:bg-gray-400 transition"
+              className="px-10 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-medium rounded-lg transition-colors flex items-center gap-2"
             >
-              {accepting ? "Accepting Load..." : "✅ Accept This Load"}
+              <Check className="w-4 h-4" />
+              {accepting ? "Accepting load..." : "Accept this load"}
             </button>
           </div>
         )}
 
-        {/* Start Trip — assigned driver, matched but not yet started */}
+        {/* Start trip — assigned driver, matched but not started */}
         {isAssignedDriver && load.status === "matched" && (
-          <div className="flex justify-center mt-8">
+          <div className="flex justify-center mt-6">
             <button
               onClick={handleStartTrip}
               disabled={updatingStatus}
-              className="px-12 py-4 bg-blue-600 hover:bg-blue-700 text-white text-lg font-semibold rounded-2xl disabled:bg-gray-400 transition flex items-center gap-2"
+              className="px-10 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-medium rounded-lg transition-colors flex items-center gap-2"
             >
-              <Truck className="w-5 h-5" />
-              {updatingStatus ? "Starting..." : "Start Trip"}
+              <Truck className="w-4 h-4" />
+              {updatingStatus ? "Starting..." : "Start trip"}
             </button>
           </div>
         )}
 
-        {/* Mark Delivered — assigned driver, in transit */}
+        {/* Mark delivered — assigned driver, in transit */}
         {isAssignedDriver && load.status === "in_transit" && (
-          <div className="flex justify-center mt-8">
+          <div className="flex justify-center mt-6">
             <button
               onClick={handleMarkDelivered}
               disabled={updatingStatus}
-              className="px-12 py-4 bg-green-600 hover:bg-green-700 text-white text-lg font-semibold rounded-2xl disabled:bg-gray-400 transition flex items-center gap-2"
+              className="px-10 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-medium rounded-lg transition-colors flex items-center gap-2"
             >
-              <Check className="w-5 h-5" />
-              {updatingStatus ? "Updating..." : "Mark Delivered"}
+              <Check className="w-4 h-4" />
+              {updatingStatus ? "Updating..." : "Mark delivered"}
             </button>
           </div>
         )}
 
         {/* Delivered confirmation */}
         {load.status === "delivered" && (
-          <div className="flex justify-center mt-8">
-            <div className="px-8 py-4 bg-green-50 text-green-700 rounded-2xl font-semibold flex items-center gap-2">
-              <Check className="w-5 h-5" />
+          <div className="flex justify-center mt-6">
+            <div className="px-6 py-3 bg-green-50 text-green-700 rounded-lg font-medium flex items-center gap-2 text-sm">
+              <Check className="w-4 h-4" />
               Delivered
             </div>
           </div>
