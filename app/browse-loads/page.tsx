@@ -129,6 +129,7 @@ export default function BrowseLoadsPage() {
       await updateDoc(doc(db, "shipments", loadId), {
         status: "matched",
         carrierId: uid,
+        matchedAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
 
