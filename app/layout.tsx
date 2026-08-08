@@ -1,7 +1,6 @@
-// app/layout.tsx
 import type { Metadata } from "next";
 import "./globals.css";
-import Header from "@/components/Header";
+import ClientHeader from "@/components/ClientHeader";
 
 export const metadata: Metadata = {
   title: "FTLcargo – Direct Freight Across Europe",
@@ -17,7 +16,6 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        {/* Inter – the font used in the new design */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
@@ -26,9 +24,7 @@ export default function RootLayout({
         />
       </head>
       <body suppressHydrationWarning={true}>
-        {/* Keep your existing Header if you still want it.
-            If the new design’s own nav is enough, you can comment this out. */}
-        <Header />
+        <ClientHeader />
         <main>{children}</main>
       </body>
     </html>
