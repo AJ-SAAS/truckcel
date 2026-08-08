@@ -1,3 +1,4 @@
+// app/my-loads/edit/[id]/page.tsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -9,7 +10,14 @@ import { auth, db, storage } from "@/lib/firebase";
 import { doc, getDoc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { onAuthStateChanged } from "firebase/auth";
-import { MapPin, Package, Truck, DollarSign, ArrowLeft, ImagePlus, X } from "lucide-react";
+import {
+  MapPin,
+  Package,
+  Truck,
+  ArrowLeft,
+  ImagePlus,
+  X,
+} from "lucide-react";
 
 const loadSchema = z.object({
   pickupCity: z.string().min(2, "Pickup city is required"),
@@ -21,9 +29,15 @@ const loadSchema = z.object({
   cargoType: z.string().min(1, "Please select cargo type"),
   cargoDescription: z.string().optional(),
   weightKg: z.coerce.number().min(1, "Weight must be at least 1 kg"),
-  pallets: z.preprocess((value) => (value === "" || value == null ? undefined : Number(value)), z.number().min(0).optional()),
+  pallets: z.preprocess(
+    (value) => (value === "" || value == null ? undefined : Number(value)),
+    z.number().min(0).optional()
+  ),
   truckType: z.string().optional(),
-  budgetUSD: z.preprocess((value) => (value === "" || value == null ? undefined : Number(value)), z.number().min(0).optional()),
+  budgetUSD: z.preprocess(
+    (value) => (value === "" || value == null ? undefined : Number(value)),
+    z.number().min(0).optional()
+  ),
   paymentTerms: z.enum(["on_delivery", "upfront", "net_30"]),
   specialInstructions: z.string().optional(),
 });
@@ -50,6 +64,18 @@ const CARGO_TYPES = [
   { value: "construction", label: "Construction Materials" },
   { value: "other", label: "Other" },
 ];
+
+const theme = {
+  font: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+  page: "#f8fafc",
+  surface: "#ffffff",
+  border: "#e5e7eb",
+  textPrimary: "#111827",
+  textSecondary: "#6b7280",
+  textMuted: "#9ca3af",
+  accent: "#2563eb",
+  accentText: "#1d4ed8",
+};
 
 export default function EditLoadPage() {
   const { id } = useParams();
@@ -188,11 +214,11 @@ export default function EditLoadPage() {
         updatedAt: serverTimestamp(),
       });
 
-      alert("✅ Load updated successfully!");
+      alert("Load updated successfully!");
       router.push("/my-loads");
     } catch (err: any) {
-      console.error("🚨 Edit Load Error:", err);
-      alert(`Failed to update load: ${err.message || "Unknown error. Please try again."}`);
+      console.error("Edit Load Error:", err);
+      alert(`Failed to update load: ${err.message || "Unknown error"}`);
     } finally {
       setSaving(false);
     }
@@ -200,8 +226,17 @@ export default function EditLoadPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <p className="text-slate-500">Loading load details...</p>
+      <div
+        style={{
+          minHeight: "100vh",
+          background: theme.page,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontFamily: theme.font,
+        }}
+      >
+        <p style={{ color: theme.textMuted, fontSize: 14 }}>Loading load details...</p>
       </div>
     );
   }
@@ -209,156 +244,428 @@ export default function EditLoadPage() {
   const totalPhotoCount = existingImageUrls.length + newImages.length;
 
   return (
-    <div className="min-h-screen bg-slate-50 py-10 px-4">
-      <div className="max-w-3xl mx-auto">
+    <div style={{ minHeight: "100vh", background: theme.page, fontFamily: theme.font, padding: "40px 20px" }}>
+      <div style={{ maxWidth: 760, margin: "0 auto" }}>
         <button
           onClick={() => router.push("/my-loads")}
-          className="flex items-center gap-2 text-slate-500 hover:text-slate-700 mb-6 font-medium"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            background: "none",
+            border: "none",
+            color: theme.textSecondary,
+            fontSize: 14,
+            fontWeight: 500,
+            cursor: "pointer",
+            marginBottom: 24,
+          }}
         >
-          <ArrowLeft className="w-5 h-5" /> Back to My Loads
+          <ArrowLeft size={16} />
+          Back to My Loads
         </button>
 
-        <h1 className="text-4xl font-bold text-slate-900 mb-2">Edit Load</h1>
-        <p className="text-slate-600 mb-10">
+        <h1 style={{ fontSize: 28, fontWeight: 700, color: theme.textPrimary, marginBottom: 8 }}>
+          Edit load
+        </h1>
+        <p style={{ color: theme.textSecondary, fontSize: 15, marginBottom: 36 }}>
           Update the shipment details below. Changes are only allowed while the load is still Open.
         </p>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-10">
-          {/* Route Section */}
-          <div className="bg-white rounded-3xl p-8 shadow border border-slate-100">
-            <div className="flex items-center gap-3 mb-6">
-              <MapPin className="w-6 h-6 text-blue-600" />
-              <h2 className="text-xl font-semibold">Route Information</h2>
+        <form onSubmit={handleSubmit(onSubmit)} style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+          {/* Route */}
+          <div
+            style={{
+              background: theme.surface,
+              borderRadius: 16,
+              padding: 28,
+              border: `1px solid ${theme.border}`,
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 22 }}>
+              <MapPin size={20} color={theme.accent} />
+              <h2 style={{ fontSize: 17, fontWeight: 600, margin: 0 }}>Route information</h2>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
               <div>
-                <label className="block text-sm font-medium mb-2">Pickup City <span className="text-red-500">*</span></label>
-                <input {...register("pickupCity")} className="w-full border border-slate-300 rounded-2xl px-4 py-3" placeholder="e.g. Riga, Latvia" />
-                {errors.pickupCity && <p className="text-red-500 text-sm mt-1">{errors.pickupCity.message}</p>}
+                <label style={{ display: "block", fontSize: 13, fontWeight: 500, marginBottom: 6 }}>
+                  Pickup city <span style={{ color: "#ef4444" }}>*</span>
+                </label>
+                <input
+                  {...register("pickupCity")}
+                  placeholder="e.g. Riga"
+                  style={{
+                    width: "100%",
+                    border: `1px solid ${theme.border}`,
+                    borderRadius: 10,
+                    padding: "11px 14px",
+                    fontSize: 14,
+                    outline: "none",
+                  }}
+                />
+                {errors.pickupCity && (
+                  <p style={{ color: "#ef4444", fontSize: 12, marginTop: 4 }}>{errors.pickupCity.message}</p>
+                )}
               </div>
+
               <div>
-                <label className="block text-sm font-medium mb-2">Delivery City <span className="text-red-500">*</span></label>
-                <input {...register("deliveryCity")} className="w-full border border-slate-300 rounded-2xl px-4 py-3" placeholder="e.g. Berlin, Germany" />
-                {errors.deliveryCity && <p className="text-red-500 text-sm mt-1">{errors.deliveryCity.message}</p>}
+                <label style={{ display: "block", fontSize: 13, fontWeight: 500, marginBottom: 6 }}>
+                  Delivery city <span style={{ color: "#ef4444" }}>*</span>
+                </label>
+                <input
+                  {...register("deliveryCity")}
+                  placeholder="e.g. Berlin"
+                  style={{
+                    width: "100%",
+                    border: `1px solid ${theme.border}`,
+                    borderRadius: 10,
+                    padding: "11px 14px",
+                    fontSize: 14,
+                    outline: "none",
+                  }}
+                />
+                {errors.deliveryCity && (
+                  <p style={{ color: "#ef4444", fontSize: 12, marginTop: 4 }}>{errors.deliveryCity.message}</p>
+                )}
               </div>
+
               <div>
-                <label className="block text-sm font-medium mb-2">Pickup Address</label>
-                <input {...register("pickupAddress")} className="w-full border border-slate-300 rounded-2xl px-4 py-3" placeholder="Street address (optional)" />
+                <label style={{ display: "block", fontSize: 13, fontWeight: 500, marginBottom: 6 }}>
+                  Pickup address
+                </label>
+                <input
+                  {...register("pickupAddress")}
+                  placeholder="Street address (optional)"
+                  style={{
+                    width: "100%",
+                    border: `1px solid ${theme.border}`,
+                    borderRadius: 10,
+                    padding: "11px 14px",
+                    fontSize: 14,
+                    outline: "none",
+                  }}
+                />
               </div>
+
               <div>
-                <label className="block text-sm font-medium mb-2">Delivery Address</label>
-                <input {...register("deliveryAddress")} className="w-full border border-slate-300 rounded-2xl px-4 py-3" placeholder="Street address (optional)" />
+                <label style={{ display: "block", fontSize: 13, fontWeight: 500, marginBottom: 6 }}>
+                  Delivery address
+                </label>
+                <input
+                  {...register("deliveryAddress")}
+                  placeholder="Street address (optional)"
+                  style={{
+                    width: "100%",
+                    border: `1px solid ${theme.border}`,
+                    borderRadius: 10,
+                    padding: "11px 14px",
+                    fontSize: 14,
+                    outline: "none",
+                  }}
+                />
               </div>
+
               <div>
-                <label className="block text-sm font-medium mb-2">Pickup Date <span className="text-red-500">*</span></label>
-                <input type="date" {...register("pickupDate")} className="w-full border border-slate-300 rounded-2xl px-4 py-3" />
-                {errors.pickupDate && <p className="text-red-500 text-sm mt-1">{errors.pickupDate.message}</p>}
+                <label style={{ display: "block", fontSize: 13, fontWeight: 500, marginBottom: 6 }}>
+                  Pickup date <span style={{ color: "#ef4444" }}>*</span>
+                </label>
+                <input
+                  type="date"
+                  {...register("pickupDate")}
+                  style={{
+                    width: "100%",
+                    border: `1px solid ${theme.border}`,
+                    borderRadius: 10,
+                    padding: "11px 14px",
+                    fontSize: 14,
+                    outline: "none",
+                  }}
+                />
+                {errors.pickupDate && (
+                  <p style={{ color: "#ef4444", fontSize: 12, marginTop: 4 }}>{errors.pickupDate.message}</p>
+                )}
               </div>
+
               <div>
-                <label className="block text-sm font-medium mb-2">Estimated Delivery Date</label>
-                <input type="date" {...register("deliveryDate")} className="w-full border border-slate-300 rounded-2xl px-4 py-3" />
+                <label style={{ display: "block", fontSize: 13, fontWeight: 500, marginBottom: 6 }}>
+                  Estimated delivery date
+                </label>
+                <input
+                  type="date"
+                  {...register("deliveryDate")}
+                  style={{
+                    width: "100%",
+                    border: `1px solid ${theme.border}`,
+                    borderRadius: 10,
+                    padding: "11px 14px",
+                    fontSize: 14,
+                    outline: "none",
+                  }}
+                />
               </div>
             </div>
           </div>
 
-          {/* Cargo Section */}
-          <div className="bg-white rounded-3xl p-8 shadow border border-slate-100">
-            <div className="flex items-center gap-3 mb-6">
-              <Package className="w-6 h-6 text-amber-600" />
-              <h2 className="text-xl font-semibold">Cargo Details</h2>
+          {/* Cargo */}
+          <div
+            style={{
+              background: theme.surface,
+              borderRadius: 16,
+              padding: 28,
+              border: `1px solid ${theme.border}`,
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 22 }}>
+              <Package size={20} color="#d97706" />
+              <h2 style={{ fontSize: 17, fontWeight: 600, margin: 0 }}>Cargo details</h2>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16 }}>
               <div>
-                <label className="block text-sm font-medium mb-2">Cargo Type <span className="text-red-500">*</span></label>
-                <select {...register("cargoType")} className="w-full border border-slate-300 rounded-2xl px-4 py-3">
-                  {CARGO_TYPES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+                <label style={{ display: "block", fontSize: 13, fontWeight: 500, marginBottom: 6 }}>
+                  Cargo type <span style={{ color: "#ef4444" }}>*</span>
+                </label>
+                <select
+                  {...register("cargoType")}
+                  style={{
+                    width: "100%",
+                    border: `1px solid ${theme.border}`,
+                    borderRadius: 10,
+                    padding: "11px 14px",
+                    fontSize: 14,
+                    outline: "none",
+                    background: "white",
+                  }}
+                >
+                  {CARGO_TYPES.map((item) => (
+                    <option key={item.value} value={item.value}>
+                      {item.label}
+                    </option>
+                  ))}
                 </select>
-                {errors.cargoType && <p className="text-red-500 text-sm mt-1">{errors.cargoType.message}</p>}
+                {errors.cargoType && (
+                  <p style={{ color: "#ef4444", fontSize: 12, marginTop: 4 }}>{errors.cargoType.message}</p>
+                )}
               </div>
+
               <div>
-                <label className="block text-sm font-medium mb-2">Weight (kg) <span className="text-red-500">*</span></label>
-                <input type="number" {...register("weightKg")} className="w-full border border-slate-300 rounded-2xl px-4 py-3" placeholder="8000" />
-                {errors.weightKg && <p className="text-red-500 text-sm mt-1">{errors.weightKg.message}</p>}
+                <label style={{ display: "block", fontSize: 13, fontWeight: 500, marginBottom: 6 }}>
+                  Weight (kg) <span style={{ color: "#ef4444" }}>*</span>
+                </label>
+                <input
+                  type="number"
+                  {...register("weightKg")}
+                  placeholder="8000"
+                  style={{
+                    width: "100%",
+                    border: `1px solid ${theme.border}`,
+                    borderRadius: 10,
+                    padding: "11px 14px",
+                    fontSize: 14,
+                    outline: "none",
+                  }}
+                />
+                {errors.weightKg && (
+                  <p style={{ color: "#ef4444", fontSize: 12, marginTop: 4 }}>{errors.weightKg.message}</p>
+                )}
               </div>
+
               <div>
-                <label className="block text-sm font-medium mb-2">Pallets</label>
-                <input type="number" {...register("pallets")} className="w-full border border-slate-300 rounded-2xl px-4 py-3" placeholder="6" />
+                <label style={{ display: "block", fontSize: 13, fontWeight: 500, marginBottom: 6 }}>
+                  Pallets
+                </label>
+                <input
+                  type="number"
+                  {...register("pallets")}
+                  placeholder="6"
+                  style={{
+                    width: "100%",
+                    border: `1px solid ${theme.border}`,
+                    borderRadius: 10,
+                    padding: "11px 14px",
+                    fontSize: 14,
+                    outline: "none",
+                  }}
+                />
               </div>
             </div>
-            <div className="mt-6">
-              <label className="block text-sm font-medium mb-2">Cargo Description</label>
-              <textarea {...register("cargoDescription")} className="w-full border border-slate-300 rounded-2xl px-4 py-3 min-h-[100px]" placeholder="Describe the goods..." />
+
+            <div style={{ marginTop: 16 }}>
+              <label style={{ display: "block", fontSize: 13, fontWeight: 500, marginBottom: 6 }}>
+                Cargo description
+              </label>
+              <textarea
+                {...register("cargoDescription")}
+                placeholder="Describe the goods..."
+                style={{
+                  width: "100%",
+                  border: `1px solid ${theme.border}`,
+                  borderRadius: 10,
+                  padding: "11px 14px",
+                  fontSize: 14,
+                  outline: "none",
+                  minHeight: 90,
+                  resize: "vertical",
+                }}
+              />
             </div>
           </div>
 
           {/* Truck & Payment */}
-          <div className="bg-white rounded-3xl p-8 shadow border border-slate-100">
-            <div className="flex items-center gap-3 mb-6">
-              <Truck className="w-6 h-6 text-emerald-600" />
-              <h2 className="text-xl font-semibold">Truck & Payment</h2>
+          <div
+            style={{
+              background: theme.surface,
+              borderRadius: 16,
+              padding: 28,
+              border: `1px solid ${theme.border}`,
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 22 }}>
+              <Truck size={20} color="#059669" />
+              <h2 style={{ fontSize: 17, fontWeight: 600, margin: 0 }}>Truck & payment</h2>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
               <div>
-                <label className="block text-sm font-medium mb-2">Preferred Truck Type</label>
-                <select {...register("truckType")} className="w-full border border-slate-300 rounded-2xl px-4 py-3">
-                  {TRUCK_TYPES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+                <label style={{ display: "block", fontSize: 13, fontWeight: 500, marginBottom: 6 }}>
+                  Preferred truck type
+                </label>
+                <select
+                  {...register("truckType")}
+                  style={{
+                    width: "100%",
+                    border: `1px solid ${theme.border}`,
+                    borderRadius: 10,
+                    padding: "11px 14px",
+                    fontSize: 14,
+                    outline: "none",
+                    background: "white",
+                  }}
+                >
+                  {TRUCK_TYPES.map((item) => (
+                    <option key={item.value} value={item.value}>
+                      {item.label}
+                    </option>
+                  ))}
                 </select>
               </div>
+
               <div>
-                <label className="block text-sm font-medium mb-2">Your Budget (USD)</label>
-                <input type="number" {...register("budgetUSD")} className="w-full border border-slate-300 rounded-2xl px-4 py-3" placeholder="1200" />
+                <label style={{ display: "block", fontSize: 13, fontWeight: 500, marginBottom: 6 }}>
+                  Your budget (€)
+                </label>
+                <input
+                  type="number"
+                  {...register("budgetUSD")}
+                  placeholder="1200"
+                  style={{
+                    width: "100%",
+                    border: `1px solid ${theme.border}`,
+                    borderRadius: 10,
+                    padding: "11px 14px",
+                    fontSize: 14,
+                    outline: "none",
+                  }}
+                />
               </div>
             </div>
-            <div className="mt-6">
-              <label className="block text-sm font-medium mb-3">Payment Terms</label>
-              <div className="flex flex-wrap gap-6">
+
+            <div style={{ marginTop: 20 }}>
+              <label style={{ display: "block", fontSize: 13, fontWeight: 500, marginBottom: 10 }}>
+                Payment terms
+              </label>
+              <div style={{ display: "flex", gap: 24 }}>
                 {[
-                  { value: "on_delivery", label: "On Delivery" },
+                  { value: "on_delivery", label: "On delivery" },
                   { value: "upfront", label: "Upfront" },
                   { value: "net_30", label: "Net 30" },
                 ].map((option) => (
-                  <label key={option.value} className="flex items-center gap-2 cursor-pointer">
-                    <input type="radio" value={option.value} {...register("paymentTerms")} className="accent-blue-600" />
-                    <span>{option.label}</span>
+                  <label
+                    key={option.value}
+                    style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 14 }}
+                  >
+                    <input type="radio" value={option.value} {...register("paymentTerms")} />
+                    {option.label}
                   </label>
                 ))}
               </div>
             </div>
           </div>
 
-          {/* Special Instructions */}
-          <div className="bg-white rounded-3xl p-8 shadow border border-slate-100">
-            <div className="flex items-center gap-3 mb-6">
-              <DollarSign className="w-6 h-6 text-purple-600" />
-              <h2 className="text-xl font-semibold">Special Instructions</h2>
-            </div>
+          {/* Special instructions */}
+          <div
+            style={{
+              background: theme.surface,
+              borderRadius: 16,
+              padding: 28,
+              border: `1px solid ${theme.border}`,
+            }}
+          >
+            <h2 style={{ fontSize: 17, fontWeight: 600, marginBottom: 16 }}>Special instructions</h2>
             <textarea
               {...register("specialInstructions")}
-              className="w-full border border-slate-300 rounded-2xl px-4 py-3 min-h-[110px]"
               placeholder="Loading hours, contact person, fragile items, etc."
+              style={{
+                width: "100%",
+                border: `1px solid ${theme.border}`,
+                borderRadius: 10,
+                padding: "11px 14px",
+                fontSize: 14,
+                outline: "none",
+                minHeight: 100,
+                resize: "vertical",
+              }}
             />
           </div>
 
-          {/* Cargo Photos */}
-          <div className="bg-white rounded-3xl p-8 shadow border border-slate-100">
-            <div className="flex items-center gap-3 mb-6">
-              <ImagePlus className="w-6 h-6 text-purple-600" />
-              <h2 className="text-xl font-semibold">Cargo Photos (Recommended)</h2>
+          {/* Photos */}
+          <div
+            style={{
+              background: theme.surface,
+              borderRadius: 16,
+              padding: 28,
+              border: `1px solid ${theme.border}`,
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 18 }}>
+              <ImagePlus size={20} color="#7c3aed" />
+              <h2 style={{ fontSize: 17, fontWeight: 600, margin: 0 }}>Cargo photos</h2>
             </div>
 
             {existingImageUrls.length > 0 && (
-              <div className="mb-6">
-                <p className="text-sm font-medium text-slate-600 mb-3">Current photos</p>
-                <div className="grid grid-cols-5 gap-3">
+              <div style={{ marginBottom: 20 }}>
+                <p style={{ fontSize: 13, fontWeight: 500, color: theme.textSecondary, marginBottom: 10 }}>
+                  Current photos
+                </p>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 12 }}>
                   {existingImageUrls.map((url, index) => (
-                    <div key={index} className="relative group">
-                      <img src={url} alt="cargo" className="w-full h-24 object-cover rounded-xl" />
+                    <div key={index} style={{ position: "relative" }}>
+                      <img
+                        src={url}
+                        alt="cargo"
+                        style={{ width: "100%", height: 90, objectFit: "cover", borderRadius: 10 }}
+                      />
                       <button
                         type="button"
                         onClick={() => removeExistingImage(url)}
-                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1"
+                        style={{
+                          position: "absolute",
+                          top: -8,
+                          right: -8,
+                          background: "#ef4444",
+                          color: "white",
+                          border: "none",
+                          borderRadius: "50%",
+                          width: 22,
+                          height: 22,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          cursor: "pointer",
+                        }}
                       >
-                        <X size={14} />
+                        <X size={12} />
                       </button>
                     </div>
                   ))}
@@ -373,33 +680,63 @@ export default function EditLoadPage() {
                   multiple
                   accept="image/*"
                   onChange={handleImageChange}
-                  className="hidden"
+                  style={{ display: "none" }}
                   id="cargo-photos"
                 />
                 <label
                   htmlFor="cargo-photos"
-                  className="border-2 border-dashed border-slate-300 rounded-2xl p-8 flex flex-col items-center justify-center cursor-pointer hover:border-blue-400"
+                  style={{
+                    border: `2px dashed ${theme.border}`,
+                    borderRadius: 14,
+                    padding: "28px 20px",
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    cursor: "pointer",
+                  }}
                 >
-                  <ImagePlus className="w-12 h-12 text-slate-400 mb-3" />
-                  <p className="font-medium">Upload more photos</p>
-                  <p className="text-sm text-slate-500 mt-1">Max 5 images total • Helps carriers understand the load</p>
+                  <ImagePlus size={28} color={theme.textMuted} style={{ marginBottom: 10 }} />
+                  <p style={{ fontWeight: 500, fontSize: 14 }}>Upload more photos</p>
+                  <p style={{ fontSize: 13, color: theme.textMuted, marginTop: 4 }}>
+                    Max 5 images total
+                  </p>
                 </label>
               </>
             )}
 
             {newImages.length > 0 && (
-              <div className="mt-6">
-                <p className="text-sm font-medium text-slate-600 mb-3">New photos to upload</p>
-                <div className="grid grid-cols-5 gap-3">
+              <div style={{ marginTop: 20 }}>
+                <p style={{ fontSize: 13, fontWeight: 500, color: theme.textSecondary, marginBottom: 10 }}>
+                  New photos to upload
+                </p>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 12 }}>
                   {newImages.map((file, index) => (
-                    <div key={index} className="relative group">
-                      <img src={URL.createObjectURL(file)} alt="preview" className="w-full h-24 object-cover rounded-xl" />
+                    <div key={index} style={{ position: "relative" }}>
+                      <img
+                        src={URL.createObjectURL(file)}
+                        alt="preview"
+                        style={{ width: "100%", height: 90, objectFit: "cover", borderRadius: 10 }}
+                      />
                       <button
                         type="button"
                         onClick={() => removeNewImage(index)}
-                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1"
+                        style={{
+                          position: "absolute",
+                          top: -8,
+                          right: -8,
+                          background: "#ef4444",
+                          color: "white",
+                          border: "none",
+                          borderRadius: "50%",
+                          width: 22,
+                          height: 22,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          cursor: "pointer",
+                        }}
                       >
-                        <X size={14} />
+                        <X size={12} />
                       </button>
                     </div>
                   ))}
@@ -408,21 +745,38 @@ export default function EditLoadPage() {
             )}
           </div>
 
-          {/* Submit */}
-          <div className="flex justify-end gap-4 pt-6">
+          {/* Actions */}
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: 12, paddingTop: 8 }}>
             <button
               type="button"
               onClick={() => router.push("/my-loads")}
-              className="px-8 py-3.5 border border-slate-300 rounded-2xl font-semibold hover:bg-slate-50"
+              style={{
+                padding: "12px 24px",
+                border: `1px solid ${theme.border}`,
+                borderRadius: 12,
+                background: "white",
+                fontWeight: 600,
+                fontSize: 14,
+                cursor: "pointer",
+              }}
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={saving}
-              className="px-10 py-3.5 bg-blue-600 text-white rounded-2xl font-semibold disabled:bg-blue-400 hover:bg-blue-700 transition"
+              style={{
+                padding: "12px 28px",
+                background: saving ? "#93c5fd" : theme.accent,
+                color: "white",
+                border: "none",
+                borderRadius: 12,
+                fontWeight: 600,
+                fontSize: 14,
+                cursor: saving ? "not-allowed" : "pointer",
+              }}
             >
-              {saving ? "Saving Changes..." : "Save Changes"}
+              {saving ? "Saving..." : "Save changes"}
             </button>
           </div>
         </form>

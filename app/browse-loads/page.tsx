@@ -1,3 +1,4 @@
+// app/browse-loads/page.tsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -14,7 +15,17 @@ import {
   serverTimestamp,
 } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
-import { ArrowLeft, ArrowRight, Clock, Scale, Package, Truck, Inbox } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Clock,
+  Scale,
+  Package,
+  Truck,
+  Inbox,
+  Zap,
+  Filter,
+} from "lucide-react";
 
 interface Shipment {
   id: string;
@@ -34,6 +45,7 @@ interface Shipment {
   status: string;
   shipperId: string;
   createdAt?: any;
+  urgent?: boolean;
 }
 
 const CARGO_LABELS: Record<string, string> = {
@@ -46,6 +58,30 @@ const CARGO_LABELS: Record<string, string> = {
   construction: "Construction",
   other: "Other",
 };
+
+const theme = {
+  font: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+  page: "#ffffff",
+  surface: "#ffffff",
+  surfaceMuted: "#f8fafc",
+  border: "#e5e7eb",
+  borderLight: "#f1f5f9",
+  textPrimary: "#111827",
+  textSecondary: "#6b7280",
+  textMuted: "#9ca3af",
+  accent: "#2563eb",
+  accentText: "#1d4ed8",
+};
+
+function timeAgo(date: any) {
+  if (!date) return "";
+  const d = date.toDate ? date.toDate() : new Date(date);
+  const seconds = Math.floor((Date.now() - d.getTime()) / 1000);
+  if (seconds < 60) return "Just now";
+  if (seconds < 3600) return `${Math.floor(seconds / 60)} min ago`;
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+  return `${Math.floor(seconds / 86400)}d ago`;
+}
 
 export default function BrowseLoadsPage() {
   const router = useRouter();
@@ -60,7 +96,6 @@ export default function BrowseLoadsPage() {
   const [filterTo, setFilterTo] = useState("");
   const [filterCargo, setFilterCargo] = useState("");
 
-  // Auth + real-time loads
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
       if (!user) {
@@ -99,15 +134,18 @@ export default function BrowseLoadsPage() {
     return () => unsubscribeAuth();
   }, [router]);
 
-  // Apply filters
   useEffect(() => {
     let result = [...loads];
 
     if (filterFrom) {
-      result = result.filter((l) => l.pickupCity.toLowerCase().includes(filterFrom.toLowerCase()));
+      result = result.filter((l) =>
+        l.pickupCity.toLowerCase().includes(filterFrom.toLowerCase())
+      );
     }
     if (filterTo) {
-      result = result.filter((l) => l.deliveryCity.toLowerCase().includes(filterTo.toLowerCase()));
+      result = result.filter((l) =>
+        l.deliveryCity.toLowerCase().includes(filterTo.toLowerCase())
+      );
     }
     if (filterCargo) {
       result = result.filter((l) => l.cargoType === filterCargo);
@@ -135,60 +173,149 @@ export default function BrowseLoadsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white font-sans">
-      {/* Top navigation */}
-      <div className="bg-white border-b border-gray-200 sticky top-0 z-50">
-        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
+    <div style={{ minHeight: "100vh", background: theme.page, fontFamily: theme.font }}>
+      {/* Top bar */}
+      <div
+        style={{
+          background: theme.surface,
+          borderBottom: `1px solid ${theme.border}`,
+          position: "sticky",
+          top: 0,
+          zIndex: 50,
+        }}
+      >
+        <div
+          style={{
+            maxWidth: 1120,
+            margin: "0 auto",
+            padding: "16px 24px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
             <button
               onClick={() => router.push("/dashboard")}
-              className="text-gray-500 hover:text-gray-800 flex items-center gap-1.5 text-sm"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                background: "none",
+                border: "none",
+                color: theme.textSecondary,
+                fontSize: 14,
+                cursor: "pointer",
+              }}
             >
-              <ArrowLeft className="w-4 h-4" />
+              <ArrowLeft size={16} />
               Dashboard
             </button>
-            <div className="h-5 w-px bg-gray-200" />
-            <h1 className="font-medium text-lg text-gray-900">Browse loads</h1>
+            <div style={{ width: 1, height: 18, background: theme.border }} />
+            <h1 style={{ fontSize: 18, fontWeight: 600, color: theme.textPrimary, margin: 0 }}>
+              Browse loads
+            </h1>
           </div>
 
-          <div className="text-sm text-gray-500">
-            <span className="font-medium text-gray-900">{filteredLoads.length}</span> loads available
+          <div style={{ fontSize: 14, color: theme.textSecondary }}>
+            <span style={{ fontWeight: 600, color: theme.textPrimary }}>
+              {filteredLoads.length}
+            </span>{" "}
+            open loads
           </div>
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-6 py-8">
+      <div style={{ maxWidth: 1120, margin: "0 auto", padding: "32px 24px" }}>
         {/* Filters */}
-        <div className="bg-gray-50 rounded-xl p-5 mb-8">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div
+          style={{
+            background: theme.surfaceMuted,
+            borderRadius: 14,
+            padding: 20,
+            marginBottom: 28,
+            border: `1px solid ${theme.border}`,
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              marginBottom: 14,
+              color: theme.textSecondary,
+              fontSize: 13,
+              fontWeight: 500,
+            }}
+          >
+            <Filter size={15} />
+            Filter loads
+          </div>
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr 1fr auto",
+              gap: 12,
+              alignItems: "end",
+            }}
+          >
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1.5">From</label>
+              <label style={{ display: "block", fontSize: 12, color: theme.textMuted, marginBottom: 6 }}>
+                From
+              </label>
               <input
                 type="text"
-                placeholder="e.g. Riga"
+                placeholder="e.g. Riga, Tallinn..."
                 value={filterFrom}
                 onChange={(e) => setFilterFrom(e.target.value)}
-                className="w-full border border-gray-200 bg-white rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500"
+                style={{
+                  width: "100%",
+                  border: `1px solid ${theme.border}`,
+                  borderRadius: 10,
+                  padding: "10px 14px",
+                  fontSize: 14,
+                  outline: "none",
+                }}
               />
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1.5">To</label>
+              <label style={{ display: "block", fontSize: 12, color: theme.textMuted, marginBottom: 6 }}>
+                To
+              </label>
               <input
                 type="text"
-                placeholder="e.g. Berlin"
+                placeholder="e.g. Berlin, Hamburg..."
                 value={filterTo}
                 onChange={(e) => setFilterTo(e.target.value)}
-                className="w-full border border-gray-200 bg-white rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500"
+                style={{
+                  width: "100%",
+                  border: `1px solid ${theme.border}`,
+                  borderRadius: 10,
+                  padding: "10px 14px",
+                  fontSize: 14,
+                  outline: "none",
+                }}
               />
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1.5">Cargo type</label>
+              <label style={{ display: "block", fontSize: 12, color: theme.textMuted, marginBottom: 6 }}>
+                Cargo type
+              </label>
               <select
                 value={filterCargo}
                 onChange={(e) => setFilterCargo(e.target.value)}
-                className="w-full border border-gray-200 bg-white rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500"
+                style={{
+                  width: "100%",
+                  border: `1px solid ${theme.border}`,
+                  borderRadius: 10,
+                  padding: "10px 14px",
+                  fontSize: 14,
+                  outline: "none",
+                  background: "white",
+                }}
               >
                 <option value="">All types</option>
                 {Object.entries(CARGO_LABELS).map(([value, label]) => (
@@ -206,91 +333,192 @@ export default function BrowseLoadsPage() {
                   setFilterTo("");
                   setFilterCargo("");
                 }}
-                className="mt-auto h-[42px] text-sm text-gray-500 hover:text-gray-800"
+                style={{
+                  height: 42,
+                  padding: "0 16px",
+                  background: "transparent",
+                  border: `1px solid ${theme.border}`,
+                  borderRadius: 10,
+                  fontSize: 13,
+                  color: theme.textSecondary,
+                  cursor: "pointer",
+                }}
               >
-                Clear filters
+                Clear
               </button>
             )}
           </div>
         </div>
 
-        {/* Load cards */}
+        {/* Results */}
         {loading ? (
-          <div className="text-center py-20 text-gray-400 text-sm">Loading available loads...</div>
+          <div style={{ textAlign: "center", padding: "60px 0", color: theme.textMuted, fontSize: 14 }}>
+            Loading available loads...
+          </div>
         ) : filteredLoads.length === 0 ? (
-          <div className="text-center py-20 bg-gray-50 rounded-xl">
-            <Inbox className="w-8 h-8 text-gray-300 mx-auto mb-3" />
-            <p className="text-base font-medium text-gray-900">No loads found</p>
-            <p className="text-gray-500 text-sm mt-1">Try changing your filters</p>
+          <div
+            style={{
+              textAlign: "center",
+              padding: "60px 20px",
+              background: theme.surfaceMuted,
+              borderRadius: 14,
+              border: `1px solid ${theme.border}`,
+            }}
+          >
+            <Inbox size={32} color={theme.textMuted} style={{ marginBottom: 12 }} />
+            <p style={{ fontSize: 16, fontWeight: 500, color: theme.textPrimary, marginBottom: 4 }}>
+              No loads found
+            </p>
+            <p style={{ fontSize: 14, color: theme.textSecondary }}>
+              Try changing your filters or check back later
+            </p>
           </div>
         ) : (
-          <div className="grid gap-4">
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {filteredLoads.map((load) => (
               <div
                 key={load.id}
-                className="bg-white border border-gray-200 rounded-xl p-5 hover:border-gray-300 transition-colors"
+                style={{
+                  background: theme.surface,
+                  border: `1px solid ${theme.border}`,
+                  borderRadius: 14,
+                  padding: "18px 22px",
+                  transition: "border-color 0.15s",
+                }}
               >
-                <div className="flex justify-between items-start">
-                  <div>
-                    <div className="flex items-center gap-2 text-lg font-medium text-gray-900">
-                      {load.pickupCity}
-                      <ArrowRight className="w-4 h-4 text-gray-400" />
-                      {load.deliveryCity}
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 20 }}>
+                  {/* Left side */}
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+                      <div style={{ fontSize: 17, fontWeight: 600, color: theme.textPrimary, display: "flex", alignItems: "center", gap: 8 }}>
+                        {load.pickupCity}
+                        <ArrowRight size={15} color={theme.textMuted} />
+                        {load.deliveryCity}
+                      </div>
+
+                      {load.urgent && (
+                        <span
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 4,
+                            background: "#fffbeb",
+                            color: "#b45309",
+                            fontSize: 11,
+                            fontWeight: 600,
+                            padding: "3px 8px",
+                            borderRadius: 20,
+                          }}
+                        >
+                          <Zap size={11} /> Urgent
+                        </span>
+                      )}
                     </div>
-                    <div className="flex items-center gap-4 text-sm text-gray-500 mt-2">
-                      <div className="flex items-center gap-1.5">
-                        <Clock className="w-3.5 h-3.5" />
-                        {load.pickupDate}
+
+                    <div style={{ display: "flex", alignItems: "center", gap: 16, fontSize: 13, color: theme.textSecondary }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                        <Clock size={13} />
+                        {load.pickupDate || "Flexible"}
                       </div>
                       {load.weightKg && (
-                        <div className="flex items-center gap-1.5">
-                          <Scale className="w-3.5 h-3.5" />
+                        <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                          <Scale size={13} />
                           {load.weightKg.toLocaleString()} kg
                         </div>
+                      )}
+                      <div style={{ display: "flex", alignItems: "center", gap: 5, color: theme.textMuted }}>
+                        {timeAgo(load.createdAt)}
+                      </div>
+                    </div>
+
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 12 }}>
+                      {load.cargoType && (
+                        <span
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 5,
+                            background: "#eff6ff",
+                            color: "#1d4ed8",
+                            fontSize: 12,
+                            fontWeight: 500,
+                            padding: "4px 10px",
+                            borderRadius: 20,
+                          }}
+                        >
+                          <Package size={12} />
+                          {CARGO_LABELS[load.cargoType] || load.cargoType}
+                        </span>
+                      )}
+                      {load.truckType && (
+                        <span
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 5,
+                            background: theme.surfaceMuted,
+                            color: theme.textSecondary,
+                            fontSize: 12,
+                            fontWeight: 500,
+                            padding: "4px 10px",
+                            borderRadius: 20,
+                          }}
+                        >
+                          <Truck size={12} />
+                          {load.truckType}
+                        </span>
                       )}
                     </div>
                   </div>
 
-                  <div className="text-right">
+                  {/* Right side */}
+                  <div style={{ textAlign: "right", minWidth: 140 }}>
                     {load.budgetUSD ? (
-                      <div className="text-2xl font-medium text-blue-600">€{load.budgetUSD}</div>
+                      <div style={{ fontSize: 22, fontWeight: 700, color: theme.accentText }}>
+                        €{load.budgetUSD}
+                      </div>
                     ) : (
-                      <div className="text-gray-400 text-sm">Negotiable</div>
+                      <div style={{ fontSize: 14, color: theme.textMuted }}>Negotiable</div>
                     )}
+
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 14 }}>
+                      <button
+                        onClick={() => handleAcceptLoad(load.id)}
+                        disabled={acceptingId === load.id}
+                        style={{
+                          background: theme.accent,
+                          color: "white",
+                          border: "none",
+                          borderRadius: 10,
+                          padding: "10px 18px",
+                          fontSize: 13,
+                          fontWeight: 600,
+                          cursor: acceptingId === load.id ? "not-allowed" : "pointer",
+                          opacity: acceptingId === load.id ? 0.7 : 1,
+                        }}
+                      >
+                        {acceptingId === load.id ? "Accepting..." : "Accept load"}
+                      </button>
+
+                      <button
+                        onClick={() => router.push(`/loads/${load.id}`)}
+                        style={{
+                          background: "transparent",
+                          color: theme.accentText,
+                          border: "none",
+                          fontSize: 13,
+                          fontWeight: 500,
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: 4,
+                        }}
+                      >
+                        View details <ArrowRight size={13} />
+                      </button>
+                    </div>
                   </div>
-                </div>
-
-                <div className="flex flex-wrap gap-2 mt-4">
-                  {load.cargoType && (
-                    <span className="inline-flex items-center gap-1.5 bg-blue-50 text-blue-700 text-xs font-medium px-2.5 py-1 rounded-full">
-                      <Package className="w-3 h-3" />
-                      {CARGO_LABELS[load.cargoType] || load.cargoType}
-                    </span>
-                  )}
-                  {load.truckType && (
-                    <span className="inline-flex items-center gap-1.5 bg-gray-100 text-gray-700 text-xs font-medium px-2.5 py-1 rounded-full">
-                      <Truck className="w-3 h-3" />
-                      {load.truckType}
-                    </span>
-                  )}
-                </div>
-
-                <div className="flex justify-between items-center mt-5">
-                  <button
-                    onClick={() => router.push(`/loads/${load.id}`)}
-                    className="text-blue-600 hover:text-blue-700 font-medium text-sm inline-flex items-center gap-1"
-                  >
-                    View details
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </button>
-
-                  <button
-                    onClick={() => handleAcceptLoad(load.id)}
-                    disabled={acceptingId === load.id}
-                    className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white px-6 py-2.5 rounded-lg font-medium text-sm transition-colors"
-                  >
-                    {acceptingId === load.id ? "Accepting..." : "Accept load"}
-                  </button>
                 </div>
               </div>
             ))}

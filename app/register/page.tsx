@@ -3,27 +3,21 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 
-// ── Design tokens ────────────────────────────────────────────────────────
-// Same values as app/dashboard/page.tsx — keep these two files in sync,
-// or better, move this into a shared /lib/theme.ts and import it everywhere.
 const theme = {
   font: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-  page: "#ffffff",
+  page: "#f8fafc",
   surface: "#ffffff",
-  surfaceMuted: "#f8fafc",
   border: "#e5e7eb",
   textPrimary: "#111827",
   textSecondary: "#6b7280",
   textMuted: "#9ca3af",
   accent: "#2563eb",
-  accentHover: "#1d4ed8",
   accentText: "#1d4ed8",
-  danger: "#b91c1c",
-  dangerBg: "#fef2f2",
 };
 
 export default function RegisterPage() {
@@ -82,93 +76,98 @@ export default function RegisterPage() {
     }
   };
 
-  const inputStyle: React.CSSProperties = {
-    width: "100%",
-    padding: "10px 12px",
-    border: `1px solid ${theme.border}`,
-    borderRadius: 8,
-    fontSize: 15,
-    color: theme.textPrimary,
-    fontFamily: theme.font,
-    outline: "none",
-  };
-
-  const labelStyle: React.CSSProperties = {
-    display: "block",
-    marginBottom: 6,
-    fontWeight: 500,
-    fontSize: 14,
-    color: theme.textPrimary,
-  };
-
   return (
     <div
       style={{
         minHeight: "100vh",
         background: theme.page,
-        fontFamily: theme.font,
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        padding: "24px",
+        padding: 24,
+        fontFamily: theme.font,
       }}
     >
       <div
         style={{
           width: "100%",
-          maxWidth: 400,
-          padding: "32px 28px",
+          maxWidth: 420,
           background: theme.surface,
-          borderRadius: 12,
+          borderRadius: 20,
+          padding: "40px 36px",
           border: `1px solid ${theme.border}`,
+          boxShadow: "0 10px 40px rgba(0,0,0,0.05)",
         }}
       >
-        <h1
-          style={{
-            fontSize: 22,
-            fontWeight: 500,
-            color: theme.textPrimary,
-            marginBottom: 6,
-            textAlign: "center",
-          }}
-        >
-          Join FTLcargo
-        </h1>
-        <p style={{ color: theme.textSecondary, fontSize: 14, textAlign: "center", marginBottom: 28 }}>
-          Start earning or shipping smarter today
-        </p>
+        {/* Brand */}
+        <div style={{ textAlign: "center", marginBottom: 28 }}>
+          <div
+            style={{
+              width: 48,
+              height: 48,
+              borderRadius: 12,
+              background: "#111214",
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              marginBottom: 16,
+              color: "white",
+              fontWeight: 700,
+              fontSize: 18,
+            }}
+          >
+            FTL
+          </div>
+          <h1 style={{ fontSize: 24, fontWeight: 700, color: theme.textPrimary, marginBottom: 6 }}>
+            Join FTLcargo
+          </h1>
+          <p style={{ color: theme.textSecondary, fontSize: 14 }}>
+            Start earning or shipping smarter today
+          </p>
+        </div>
 
         {error && (
-          <p
+          <div
             style={{
-              color: theme.danger,
-              background: theme.dangerBg,
-              padding: "10px 12px",
-              borderRadius: 8,
-              marginBottom: 18,
+              background: "#fef2f2",
+              color: "#b91c1c",
+              padding: "12px 14px",
+              borderRadius: 10,
+              fontSize: 14,
+              marginBottom: 20,
               textAlign: "center",
-              fontSize: 13,
             }}
           >
             {error}
-          </p>
+          </div>
         )}
 
         <form onSubmit={handleSignUp}>
           <div style={{ marginBottom: 18 }}>
-            <label style={labelStyle}>Email</label>
+            <label style={{ display: "block", fontSize: 13, fontWeight: 500, marginBottom: 6 }}>
+              Email
+            </label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
               placeholder="you@example.com"
-              style={inputStyle}
+              style={{
+                width: "100%",
+                padding: "12px 14px",
+                border: `1px solid ${theme.border}`,
+                borderRadius: 10,
+                fontSize: 15,
+                outline: "none",
+              }}
             />
           </div>
 
           <div style={{ marginBottom: 18 }}>
-            <label style={labelStyle}>Password</label>
+            <label style={{ display: "block", fontSize: 13, fontWeight: 500, marginBottom: 6 }}>
+              Password
+            </label>
             <input
               type="password"
               value={password}
@@ -176,13 +175,22 @@ export default function RegisterPage() {
               required
               minLength={6}
               placeholder="At least 6 characters"
-              style={inputStyle}
+              style={{
+                width: "100%",
+                padding: "12px 14px",
+                border: `1px solid ${theme.border}`,
+                borderRadius: 10,
+                fontSize: 15,
+                outline: "none",
+              }}
             />
           </div>
 
           <div style={{ marginBottom: 28 }}>
-            <label style={labelStyle}>I am a...</label>
-            <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 8 }}>
+            <label style={{ display: "block", fontSize: 13, fontWeight: 500, marginBottom: 10 }}>
+              I am a...
+            </label>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {[
                 { value: "driver", label: "Driver / Truck owner" },
                 { value: "shipper", label: "Shipper / Company" },
@@ -193,13 +201,12 @@ export default function RegisterPage() {
                     display: "flex",
                     alignItems: "center",
                     gap: 10,
-                    padding: "10px 12px",
+                    padding: "12px 14px",
                     border: `1px solid ${role === option.value ? theme.accent : theme.border}`,
-                    borderRadius: 8,
+                    borderRadius: 10,
                     cursor: "pointer",
                     fontSize: 14,
-                    color: theme.textPrimary,
-                    background: role === option.value ? "#eff6ff" : theme.surface,
+                    background: role === option.value ? "#eff6ff" : "white",
                   }}
                 >
                   <input
@@ -221,26 +228,25 @@ export default function RegisterPage() {
             disabled={loading}
             style={{
               width: "100%",
-              padding: "11px",
-              background: loading ? "#93b4f0" : theme.accent,
-              color: "#ffffff",
+              padding: "13px",
+              background: loading ? "#93c5fd" : theme.accent,
+              color: "white",
               border: "none",
-              borderRadius: 8,
+              borderRadius: 12,
               fontSize: 15,
-              fontWeight: 500,
+              fontWeight: 600,
               cursor: loading ? "not-allowed" : "pointer",
-              fontFamily: theme.font,
             }}
           >
             {loading ? "Creating account..." : "Create account"}
           </button>
         </form>
 
-        <p style={{ marginTop: 22, textAlign: "center", color: theme.textSecondary, fontSize: 14 }}>
+        <p style={{ marginTop: 24, textAlign: "center", color: theme.textSecondary, fontSize: 14 }}>
           Already have an account?{" "}
-          <a href="/login" style={{ color: theme.accentText, fontWeight: 500, textDecoration: "none" }}>
+          <Link href="/login" style={{ color: theme.accentText, fontWeight: 600, textDecoration: "none" }}>
             Log in
-          </a>
+          </Link>
         </p>
       </div>
     </div>

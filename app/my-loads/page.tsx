@@ -1,3 +1,4 @@
+// app/my-loads/page.tsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -14,7 +15,7 @@ import {
   serverTimestamp,
 } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
-import { ArrowLeft, Pencil, XCircle, Eye } from "lucide-react";
+import { ArrowLeft, Pencil, XCircle, Eye, Package, Plus } from "lucide-react";
 
 interface Shipment {
   id: string;
@@ -39,12 +40,24 @@ const CARGO_LABELS: Record<string, string> = {
   other: "Other",
 };
 
-const STATUS_STYLES: Record<string, string> = {
-  open: "bg-emerald-50 text-emerald-700",
-  matched: "bg-blue-50 text-blue-700",
-  in_transit: "bg-amber-50 text-amber-700",
-  delivered: "bg-slate-100 text-slate-700",
-  cancelled: "bg-red-50 text-red-700",
+const STATUS_STYLES: Record<string, { bg: string; color: string }> = {
+  open: { bg: "#ecfdf5", color: "#047857" },
+  matched: { bg: "#eff6ff", color: "#1d4ed8" },
+  in_transit: { bg: "#fffbeb", color: "#b45309" },
+  delivered: { bg: "#f1f5f9", color: "#475569" },
+  cancelled: { bg: "#fef2f2", color: "#b91c1c" },
+};
+
+const theme = {
+  font: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+  page: "#f8fafc",
+  surface: "#ffffff",
+  border: "#e5e7eb",
+  textPrimary: "#111827",
+  textSecondary: "#6b7280",
+  textMuted: "#9ca3af",
+  accent: "#2563eb",
+  accentText: "#1d4ed8",
 };
 
 export default function MyLoadsPage() {
@@ -77,7 +90,7 @@ export default function MyLoadsPage() {
           setLoading(false);
         },
         (error) => {
-          console.error("🚨 My Loads listener error:", error);
+          console.error("My Loads listener error:", error);
           setLoading(false);
         }
       );
@@ -109,87 +122,202 @@ export default function MyLoadsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-12">
-      <div className="max-w-5xl mx-auto px-4 pt-8">
+    <div style={{ minHeight: "100vh", background: theme.page, fontFamily: theme.font, paddingBottom: 48 }}>
+      <div style={{ maxWidth: 960, margin: "0 auto", padding: "36px 20px" }}>
         <button
           onClick={() => router.push("/dashboard")}
-          className="flex items-center gap-2 text-slate-500 hover:text-slate-700 mb-6"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            background: "none",
+            border: "none",
+            color: theme.textSecondary,
+            fontSize: 14,
+            cursor: "pointer",
+            marginBottom: 24,
+          }}
         >
-          <ArrowLeft className="w-5 h-5" />
+          <ArrowLeft size={16} />
           Back to Dashboard
         </button>
 
-        <h1 className="text-3xl font-bold text-slate-900 mb-2">My Loads</h1>
-        <p className="text-slate-600 mb-8">
-          View, edit, or cancel the loads you've posted. Loads can only be edited or
-          cancelled while they're still Open — once a driver accepts, the details are locked.
-        </p>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 32 }}>
+          <div>
+            <h1 style={{ fontSize: 26, fontWeight: 700, color: theme.textPrimary, marginBottom: 6 }}>
+              My Loads
+            </h1>
+            <p style={{ color: theme.textSecondary, fontSize: 14, maxWidth: 520 }}>
+              View, edit, or cancel the loads you've posted. Loads can only be edited or cancelled while they're still Open.
+            </p>
+          </div>
+
+          <button
+            onClick={() => router.push("/post-load")}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              padding: "11px 20px",
+              background: theme.accent,
+              color: "white",
+              border: "none",
+              borderRadius: 12,
+              fontWeight: 600,
+              fontSize: 14,
+              cursor: "pointer",
+            }}
+          >
+            <Plus size={16} />
+            Post new load
+          </button>
+        </div>
 
         {loading ? (
-          <div className="text-center py-20 text-slate-500">Loading your loads...</div>
+          <div style={{ textAlign: "center", padding: "60px 0", color: theme.textMuted, fontSize: 14 }}>
+            Loading your loads...
+          </div>
         ) : loads.length === 0 ? (
-          <div className="text-center py-20 bg-white rounded-2xl border">
-            <p className="text-4xl mb-4">📦</p>
-            <p className="text-xl font-medium">You haven't posted any loads yet</p>
+          <div
+            style={{
+              textAlign: "center",
+              padding: "64px 24px",
+              background: theme.surface,
+              borderRadius: 16,
+              border: `1px solid ${theme.border}`,
+            }}
+          >
+            <Package size={36} color={theme.textMuted} style={{ marginBottom: 16 }} />
+            <p style={{ fontSize: 17, fontWeight: 600, color: theme.textPrimary, marginBottom: 8 }}>
+              You haven't posted any loads yet
+            </p>
+            <p style={{ color: theme.textSecondary, fontSize: 14, marginBottom: 24 }}>
+              Post your first load to start getting matched with carriers.
+            </p>
             <button
               onClick={() => router.push("/post-load")}
-              className="mt-6 px-8 py-3 bg-blue-600 text-white rounded-2xl font-semibold hover:bg-blue-700"
+              style={{
+                padding: "12px 24px",
+                background: theme.accent,
+                color: "white",
+                border: "none",
+                borderRadius: 12,
+                fontWeight: 600,
+                fontSize: 14,
+                cursor: "pointer",
+              }}
             >
-              Post Your First Load
+              Post your first load
             </button>
           </div>
         ) : (
-          <div className="grid gap-4">
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {loads.map((load) => {
               const isOpen = load.status === "open";
+              const statusStyle = STATUS_STYLES[load.status] || STATUS_STYLES.delivered;
+
               return (
                 <div
                   key={load.id}
-                  className="bg-white border rounded-2xl p-6 flex items-center justify-between"
+                  style={{
+                    background: theme.surface,
+                    border: `1px solid ${theme.border}`,
+                    borderRadius: 14,
+                    padding: "18px 22px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 16,
+                  }}
                 >
-                  <div>
-                    <div className="flex items-center gap-3 text-lg font-semibold text-slate-900">
-                      {load.pickupCity} <span className="text-blue-600">→</span> {load.deliveryCity}
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 6 }}>
+                      <div style={{ fontSize: 16, fontWeight: 600, color: theme.textPrimary }}>
+                        {load.pickupCity}{" "}
+                        <span style={{ color: theme.accent }}>→</span> {load.deliveryCity}
+                      </div>
                       <span
-                        className={`text-xs font-semibold px-3 py-1 rounded-full capitalize ${
-                          STATUS_STYLES[load.status] || "bg-slate-100 text-slate-700"
-                        }`}
+                        style={{
+                          fontSize: 12,
+                          fontWeight: 600,
+                          padding: "3px 10px",
+                          borderRadius: 20,
+                          background: statusStyle.bg,
+                          color: statusStyle.color,
+                          textTransform: "capitalize",
+                        }}
                       >
                         {load.status.replace("_", " ")}
                       </span>
                     </div>
-                    <div className="flex items-center gap-4 text-sm text-slate-500 mt-2">
+
+                    <div style={{ display: "flex", gap: 16, fontSize: 13, color: theme.textSecondary }}>
                       <span>{CARGO_LABELS[load.cargoType || ""] || load.cargoType || "—"}</span>
                       <span>Pickup: {load.pickupDate || "—"}</span>
-                      {load.budgetUSD && <span>€{load.budgetUSD}</span>}
+                      {load.budgetUSD && <span style={{ fontWeight: 500, color: theme.accentText }}>€{load.budgetUSD}</span>}
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                     <button
                       onClick={() => router.push(`/loads/${load.id}`)}
-                      className="p-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50"
                       title="View"
+                      style={{
+                        width: 38,
+                        height: 38,
+                        borderRadius: 10,
+                        border: `1px solid ${theme.border}`,
+                        background: "white",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        cursor: "pointer",
+                        color: theme.textSecondary,
+                      }}
                     >
-                      <Eye className="w-4 h-4" />
+                      <Eye size={16} />
                     </button>
 
                     <button
                       onClick={() => isOpen && router.push(`/my-loads/edit/${load.id}`)}
                       disabled={!isOpen}
-                      className="p-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed"
                       title={isOpen ? "Edit" : "Locked — driver already assigned"}
+                      style={{
+                        width: 38,
+                        height: 38,
+                        borderRadius: 10,
+                        border: `1px solid ${theme.border}`,
+                        background: "white",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        cursor: isOpen ? "pointer" : "not-allowed",
+                        color: theme.textSecondary,
+                        opacity: isOpen ? 1 : 0.35,
+                      }}
                     >
-                      <Pencil className="w-4 h-4" />
+                      <Pencil size={16} />
                     </button>
 
                     <button
                       onClick={() => isOpen && handleCancel(load.id)}
                       disabled={!isOpen || cancellingId === load.id}
-                      className="p-2.5 rounded-xl border border-red-200 text-red-500 hover:bg-red-50 disabled:opacity-30 disabled:cursor-not-allowed"
                       title={isOpen ? "Cancel Load" : "Locked — driver already assigned"}
+                      style={{
+                        width: 38,
+                        height: 38,
+                        borderRadius: 10,
+                        border: "1px solid #fecaca",
+                        background: "white",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        cursor: isOpen ? "pointer" : "not-allowed",
+                        color: "#ef4444",
+                        opacity: isOpen ? 1 : 0.35,
+                      }}
                     >
-                      <XCircle className="w-4 h-4" />
+                      <XCircle size={16} />
                     </button>
                   </div>
                 </div>

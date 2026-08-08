@@ -1,3 +1,4 @@
+// app/loads/[id]/page.tsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -5,7 +6,16 @@ import { useParams, useRouter } from "next/navigation";
 import { doc, getDoc, updateDoc, serverTimestamp, increment } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
-import { MapPin, Package, Truck, Clock, ArrowLeft, ImageIcon, Check } from "lucide-react";
+import {
+  MapPin,
+  Package,
+  Truck,
+  Clock,
+  ArrowLeft,
+  ImageIcon,
+  Check,
+  ArrowRight,
+} from "lucide-react";
 
 interface Shipment {
   id: string;
@@ -51,6 +61,18 @@ const TIMELINE_STEPS = [
   { key: "delivered", label: "Delivered", statuses: ["delivered"] },
 ];
 
+const theme = {
+  font: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+  page: "#f8fafc",
+  surface: "#ffffff",
+  border: "#e5e7eb",
+  textPrimary: "#111827",
+  textSecondary: "#6b7280",
+  textMuted: "#9ca3af",
+  accent: "#2563eb",
+  accentText: "#1d4ed8",
+};
+
 function formatTimestamp(ts: any): string {
   if (!ts) return "";
   try {
@@ -65,17 +87,29 @@ function formatTimestamp(ts: any): string {
   }
 }
 
-// Shared card wrapper so every section on this page carries the same
-// radius, border, and padding.
 function Section({ children }: { children: React.ReactNode }) {
-  return <div className="bg-white rounded-xl p-6 border border-gray-200 mb-6">{children}</div>;
+  return (
+    <div
+      style={{
+        background: theme.surface,
+        borderRadius: 16,
+        padding: 24,
+        border: `1px solid ${theme.border}`,
+        marginBottom: 16,
+      }}
+    >
+      {children}
+    </div>
+  );
 }
 
 function SectionHeading({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
   return (
-    <div className="flex items-center gap-2.5 mb-5">
+    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 18 }}>
       {icon}
-      <h2 className="text-base font-medium text-gray-900">{children}</h2>
+      <h2 style={{ fontSize: 16, fontWeight: 600, color: theme.textPrimary, margin: 0 }}>
+        {children}
+      </h2>
     </div>
   );
 }
@@ -83,8 +117,8 @@ function SectionHeading({ icon, children }: { icon: React.ReactNode; children: R
 function Field({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div>
-      <p className="text-xs text-gray-500">{label}</p>
-      <p className="font-medium text-gray-900 mt-0.5">{value}</p>
+      <p style={{ fontSize: 12, color: theme.textMuted, marginBottom: 4 }}>{label}</p>
+      <div style={{ fontSize: 14, fontWeight: 500, color: theme.textPrimary }}>{value}</div>
     </div>
   );
 }
@@ -100,9 +134,11 @@ function ShipmentTimeline({ load }: { load: Shipment }) {
   if (load.status === "cancelled") {
     return (
       <Section>
-        <div className="flex items-center gap-3">
-          <span className="w-2.5 h-2.5 rounded-full bg-red-500" />
-          <p className="font-medium text-gray-700">This load was cancelled by the shipper.</p>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <span style={{ width: 10, height: 10, borderRadius: "50%", background: "#ef4444" }} />
+          <p style={{ fontWeight: 500, color: theme.textPrimary }}>
+            This load was cancelled by the shipper.
+          </p>
         </div>
       </Section>
     );
@@ -110,33 +146,63 @@ function ShipmentTimeline({ load }: { load: Shipment }) {
 
   return (
     <Section>
-      <h2 className="text-base font-medium text-gray-900 mb-5">Shipment timeline</h2>
-      <div className="space-y-0">
+      <h2 style={{ fontSize: 16, fontWeight: 600, color: theme.textPrimary, marginBottom: 20 }}>
+        Shipment timeline
+      </h2>
+
+      <div>
         {TIMELINE_STEPS.map((step, i) => {
           const isDone = step.statuses.includes(load.status);
           const isLast = i === TIMELINE_STEPS.length - 1;
           const ts = timestampFor[step.key];
+
           return (
-            <div key={step.key} className="flex gap-4">
-              <div className="flex flex-col items-center">
+            <div key={step.key} style={{ display: "flex", gap: 14 }}>
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
                 <div
-                  className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${
-                    isDone ? "bg-green-600" : "bg-gray-200"
-                  }`}
+                  style={{
+                    width: 28,
+                    height: 28,
+                    borderRadius: "50%",
+                    background: isDone ? "#16a34a" : "#e5e7eb",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexShrink: 0,
+                  }}
                 >
                   {isDone ? (
-                    <Check className="w-3.5 h-3.5 text-white" />
+                    <Check size={14} color="white" />
                   ) : (
-                    <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
+                    <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#9ca3af" }} />
                   )}
                 </div>
                 {!isLast && (
-                  <div className={`w-0.5 flex-1 min-h-[26px] ${isDone ? "bg-green-600" : "bg-gray-200"}`} />
+                  <div
+                    style={{
+                      width: 2,
+                      flex: 1,
+                      minHeight: 28,
+                      background: isDone ? "#16a34a" : "#e5e7eb",
+                    }}
+                  />
                 )}
               </div>
-              <div className="pb-6">
-                <p className={`text-sm font-medium ${isDone ? "text-gray-900" : "text-gray-400"}`}>{step.label}</p>
-                {isDone && ts && <p className="text-xs text-gray-400 mt-0.5">{formatTimestamp(ts)}</p>}
+
+              <div style={{ paddingBottom: 24 }}>
+                <p
+                  style={{
+                    fontSize: 14,
+                    fontWeight: 500,
+                    color: isDone ? theme.textPrimary : theme.textMuted,
+                    marginBottom: 2,
+                  }}
+                >
+                  {step.label}
+                </p>
+                {isDone && ts && (
+                  <p style={{ fontSize: 12, color: theme.textMuted }}>{formatTimestamp(ts)}</p>
+                )}
               </div>
             </div>
           );
@@ -278,8 +344,17 @@ export default function LoadDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <p className="text-gray-400 text-sm">Loading load details...</p>
+      <div
+        style={{
+          minHeight: "100vh",
+          background: theme.page,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontFamily: theme.font,
+        }}
+      >
+        <p style={{ color: theme.textMuted, fontSize: 14 }}>Loading load details...</p>
       </div>
     );
   }
@@ -290,33 +365,67 @@ export default function LoadDetailPage() {
   const isAssignedDriver = isCarrier && load.carrierId === uid;
 
   return (
-    <div className="min-h-screen bg-white pb-16 font-sans">
-      <div className="max-w-3xl mx-auto px-4 pt-8">
+    <div style={{ minHeight: "100vh", background: theme.page, fontFamily: theme.font, paddingBottom: 60 }}>
+      <div style={{ maxWidth: 720, margin: "0 auto", padding: "36px 20px" }}>
         <button
           onClick={() => router.back()}
-          className="flex items-center gap-2 text-gray-500 hover:text-gray-800 mb-6 text-sm"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            background: "none",
+            border: "none",
+            color: theme.textSecondary,
+            fontSize: 14,
+            cursor: "pointer",
+            marginBottom: 24,
+          }}
         >
-          <ArrowLeft className="w-4 h-4" />
+          <ArrowLeft size={16} />
           Back
         </button>
 
         {/* Header */}
         <Section>
-          <div className="flex justify-between items-start">
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 20 }}>
             <div>
-              <div className="text-2xl font-medium text-gray-900 flex items-center gap-3">
-                {load.pickupCity} <span className="text-blue-600">→</span> {load.deliveryCity}
+              <div
+                style={{
+                  fontSize: 22,
+                  fontWeight: 600,
+                  color: theme.textPrimary,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                }}
+              >
+                {load.pickupCity}
+                <ArrowRight size={18} color={theme.accent} />
+                {load.deliveryCity}
               </div>
-              <div className="text-gray-500 mt-2 flex items-center gap-2 text-sm">
-                <Clock className="w-4 h-4" />
+              <div
+                style={{
+                  marginTop: 10,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  fontSize: 14,
+                  color: theme.textSecondary,
+                }}
+              >
+                <Clock size={15} />
                 Pickup: {load.pickupDate || "Flexible"}
               </div>
             </div>
 
             {load.budgetUSD && (
-              <div className="text-right">
-                <div className="text-3xl font-medium text-blue-600">€{load.budgetUSD}</div>
-                <div className="text-sm text-gray-500 capitalize">{load.paymentTerms?.replace("_", " ")}</div>
+              <div style={{ textAlign: "right" }}>
+                <div style={{ fontSize: 26, fontWeight: 700, color: theme.accentText }}>
+                  €{load.budgetUSD}
+                </div>
+                <div style={{ fontSize: 13, color: theme.textMuted, marginTop: 2, textTransform: "capitalize" }}>
+                  {load.paymentTerms?.replace("_", " ")}
+                </div>
               </div>
             )}
           </div>
@@ -326,69 +435,104 @@ export default function LoadDetailPage() {
 
         {/* Cargo photos */}
         <Section>
-          <SectionHeading icon={<ImageIcon className="w-5 h-5 text-gray-400" />}>Cargo photos</SectionHeading>
+          <SectionHeading icon={<ImageIcon size={18} color={theme.textMuted} />}>
+            Cargo photos
+          </SectionHeading>
 
           {hasImages ? (
             <>
-              <div className="rounded-lg overflow-hidden bg-gray-50 mb-3">
+              <div
+                style={{
+                  borderRadius: 12,
+                  overflow: "hidden",
+                  background: "#f1f5f9",
+                  marginBottom: 12,
+                }}
+              >
                 <img
                   src={activeImage ?? load.imageUrls![0]}
                   alt="Cargo"
-                  className="w-full max-h-[420px] object-contain"
+                  style={{ width: "100%", maxHeight: 400, objectFit: "contain" }}
                 />
               </div>
+
               {load.imageUrls!.length > 1 && (
-                <div className="grid grid-cols-5 gap-2.5">
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 10 }}>
                   {load.imageUrls!.map((url, i) => (
                     <button
                       key={i}
                       type="button"
                       onClick={() => setActiveImage(url)}
-                      className={`rounded-md overflow-hidden border-2 ${
-                        activeImage === url ? "border-blue-600" : "border-transparent"
-                      }`}
+                      style={{
+                        borderRadius: 8,
+                        overflow: "hidden",
+                        border: activeImage === url ? `2px solid ${theme.accent}` : "2px solid transparent",
+                        padding: 0,
+                        cursor: "pointer",
+                        background: "none",
+                      }}
                     >
-                      <img src={url} alt={`Cargo ${i + 1}`} className="w-full h-20 object-cover" />
+                      <img
+                        src={url}
+                        alt={`Cargo ${i + 1}`}
+                        style={{ width: "100%", height: 72, objectFit: "cover", display: "block" }}
+                      />
                     </button>
                   ))}
                 </div>
               )}
             </>
           ) : (
-            <p className="text-gray-400 text-sm">No photos were provided for this load.</p>
+            <p style={{ color: theme.textMuted, fontSize: 14 }}>No photos were provided for this load.</p>
           )}
         </Section>
 
         {/* Cargo info */}
         <Section>
-          <SectionHeading icon={<Package className="w-5 h-5 text-gray-400" />}>Cargo information</SectionHeading>
+          <SectionHeading icon={<Package size={18} color={theme.textMuted} />}>
+            Cargo information
+          </SectionHeading>
 
-          <div className="grid grid-cols-2 gap-y-5 text-sm">
-            <Field label="Cargo type" value={CARGO_LABELS[load.cargoType || ""] || load.cargoType || "—"} />
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+            <Field
+              label="Cargo type"
+              value={CARGO_LABELS[load.cargoType || ""] || load.cargoType || "—"}
+            />
             <Field label="Weight" value={`${load.weightKg?.toLocaleString() || "—"} kg`} />
             <Field label="Pallets" value={load.pallets || "—"} />
-            <Field label="Preferred truck" value={<span className="capitalize">{load.truckType || "Any"}</span>} />
+            <Field
+              label="Preferred truck"
+              value={<span style={{ textTransform: "capitalize" }}>{load.truckType || "Any"}</span>}
+            />
           </div>
 
           {load.cargoDescription && (
-            <div className="mt-6">
-              <p className="text-xs text-gray-500 mb-1.5">Description</p>
-              <p className="text-gray-700 text-sm leading-relaxed">{load.cargoDescription}</p>
+            <div style={{ marginTop: 22 }}>
+              <p style={{ fontSize: 12, color: theme.textMuted, marginBottom: 6 }}>Description</p>
+              <p style={{ fontSize: 14, color: theme.textPrimary, lineHeight: 1.6 }}>
+                {load.cargoDescription}
+              </p>
             </div>
           )}
         </Section>
 
         {/* Route & instructions */}
         <Section>
-          <SectionHeading icon={<MapPin className="w-5 h-5 text-gray-400" />}>Route and instructions</SectionHeading>
+          <SectionHeading icon={<MapPin size={18} color={theme.textMuted} />}>
+            Route and instructions
+          </SectionHeading>
 
-          <div className="space-y-5 text-sm">
+          <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
             <Field
               label="Pickup"
               value={
                 <>
                   {load.pickupCity}
-                  {load.pickupAddress && <span className="block text-gray-500 font-normal">{load.pickupAddress}</span>}
+                  {load.pickupAddress && (
+                    <span style={{ display: "block", color: theme.textSecondary, fontWeight: 400, marginTop: 2 }}>
+                      {load.pickupAddress}
+                    </span>
+                  )}
                 </>
               }
             />
@@ -398,7 +542,9 @@ export default function LoadDetailPage() {
                 <>
                   {load.deliveryCity}
                   {load.deliveryAddress && (
-                    <span className="block text-gray-500 font-normal">{load.deliveryAddress}</span>
+                    <span style={{ display: "block", color: theme.textSecondary, fontWeight: 400, marginTop: 2 }}>
+                      {load.deliveryAddress}
+                    </span>
                   )}
                 </>
               }
@@ -406,60 +552,107 @@ export default function LoadDetailPage() {
 
             {load.specialInstructions && (
               <div>
-                <p className="text-xs text-gray-500 mb-1.5">Special instructions</p>
-                <p className="text-gray-700 leading-relaxed">{load.specialInstructions}</p>
+                <p style={{ fontSize: 12, color: theme.textMuted, marginBottom: 6 }}>Special instructions</p>
+                <p style={{ fontSize: 14, color: theme.textPrimary, lineHeight: 1.6 }}>
+                  {load.specialInstructions}
+                </p>
               </div>
             )}
           </div>
         </Section>
 
-        {/* Accept — undecided open loads */}
+        {/* Actions */}
         {isCarrier && load.status === "open" && (
-          <div className="flex justify-center mt-6">
+          <div style={{ display: "flex", justifyContent: "center", marginTop: 24 }}>
             <button
               onClick={handleAccept}
               disabled={accepting}
-              className="px-10 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-medium rounded-lg transition-colors flex items-center gap-2"
+              style={{
+                padding: "13px 32px",
+                background: accepting ? "#93c5fd" : theme.accent,
+                color: "white",
+                border: "none",
+                borderRadius: 12,
+                fontWeight: 600,
+                fontSize: 15,
+                cursor: accepting ? "not-allowed" : "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+              }}
             >
-              <Check className="w-4 h-4" />
-              {accepting ? "Accepting load..." : "Accept this load"}
+              <Check size={16} />
+              {accepting ? "Accepting..." : "Accept this load"}
             </button>
           </div>
         )}
 
-        {/* Start trip — assigned driver, matched but not started */}
         {isAssignedDriver && load.status === "matched" && (
-          <div className="flex justify-center mt-6">
+          <div style={{ display: "flex", justifyContent: "center", marginTop: 24 }}>
             <button
               onClick={handleStartTrip}
               disabled={updatingStatus}
-              className="px-10 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-medium rounded-lg transition-colors flex items-center gap-2"
+              style={{
+                padding: "13px 32px",
+                background: updatingStatus ? "#93c5fd" : theme.accent,
+                color: "white",
+                border: "none",
+                borderRadius: 12,
+                fontWeight: 600,
+                fontSize: 15,
+                cursor: updatingStatus ? "not-allowed" : "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+              }}
             >
-              <Truck className="w-4 h-4" />
+              <Truck size={16} />
               {updatingStatus ? "Starting..." : "Start trip"}
             </button>
           </div>
         )}
 
-        {/* Mark delivered — assigned driver, in transit */}
         {isAssignedDriver && load.status === "in_transit" && (
-          <div className="flex justify-center mt-6">
+          <div style={{ display: "flex", justifyContent: "center", marginTop: 24 }}>
             <button
               onClick={handleMarkDelivered}
               disabled={updatingStatus}
-              className="px-10 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-medium rounded-lg transition-colors flex items-center gap-2"
+              style={{
+                padding: "13px 32px",
+                background: updatingStatus ? "#93c5fd" : theme.accent,
+                color: "white",
+                border: "none",
+                borderRadius: 12,
+                fontWeight: 600,
+                fontSize: 15,
+                cursor: updatingStatus ? "not-allowed" : "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+              }}
             >
-              <Check className="w-4 h-4" />
+              <Check size={16} />
               {updatingStatus ? "Updating..." : "Mark delivered"}
             </button>
           </div>
         )}
 
-        {/* Delivered confirmation */}
         {load.status === "delivered" && (
-          <div className="flex justify-center mt-6">
-            <div className="px-6 py-3 bg-green-50 text-green-700 rounded-lg font-medium flex items-center gap-2 text-sm">
-              <Check className="w-4 h-4" />
+          <div style={{ display: "flex", justifyContent: "center", marginTop: 24 }}>
+            <div
+              style={{
+                padding: "12px 24px",
+                background: "#f0fdf4",
+                color: "#15803d",
+                borderRadius: 12,
+                fontWeight: 600,
+                fontSize: 14,
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+              }}
+            >
+              <Check size={16} />
               Delivered
             </div>
           </div>
