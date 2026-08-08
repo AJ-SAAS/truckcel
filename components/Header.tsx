@@ -1,3 +1,4 @@
+// components/Header.tsx
 "use client";
 
 import Link from "next/link";
@@ -25,58 +26,91 @@ export default function Header() {
   return (
     <nav
       style={{
-        background: "white",
-        borderBottom: "1px solid #e2e8f0",
-        padding: "0 32px",
-        height: 68,
+        background: "#ffffff",
+        borderBottom: "1px solid #e7e8ea",
+        height: 84,
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
+        padding: "0 36px",
         position: "sticky",
         top: 0,
         zIndex: 100,
+        fontFamily: "Inter, system-ui, -apple-system, sans-serif",
       }}
     >
-      {/* NEW FTL CARGO LOGO */}
-      <Link href="/" style={{ display: "flex", alignItems: "center", gap: 12, textDecoration: "none" }}>
-        <img 
-          src="/ftl-cargo-logo.png" 
-          alt="FTL Cargo" 
-          style={{ height: 42, width: "auto" }} 
+      {/* Logo */}
+      <Link
+        href="/"
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+          textDecoration: "none",
+          color: "#111214",
+        }}
+      >
+        <img
+          src="/ftl-cargo-logo.png"
+          alt="FTLcargo"
+          style={{ height: 40, width: "auto" }}
         />
+        {/* Optional text next to logo – remove if your logo already has the name */}
+        {/* <div>
+          <div style={{ fontWeight: 700, fontSize: 15, letterSpacing: "-0.02em" }}>
+            FTLcargo
+          </div>
+          <div style={{ fontSize: 10, color: "#777b80", marginTop: 1 }}>
+            Direct freight across Europe
+          </div>
+        </div> */}
       </Link>
 
-      <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
+      {/* Right side actions */}
+      <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
         {user ? (
           <>
             <Link
               href="/dashboard"
               style={{
-                padding: "8px 16px",
-                background: "#eff6ff",
-                border: "1px solid #bfdbfe",
-                borderRadius: 8,
-                color: "#1d4ed8",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "10px 18px",
+                background: "#f4f5f6",
+                borderRadius: 999,
+                color: "#111214",
                 fontWeight: 600,
+                fontSize: 13,
                 textDecoration: "none",
-                fontSize: 14,
+                transition: "background 0.15s ease",
               }}
             >
-              📊 Dashboard
+              Dashboard
             </Link>
-            <span style={{ fontSize: 14, color: "#475569" }}>
-              Welcome, {user.email?.split("@")[0]}
-            </span>
+
+            <div
+              style={{
+                fontSize: 13,
+                color: "#777b80",
+                fontWeight: 500,
+              }}
+            >
+              {user.email?.split("@")[0]}
+            </div>
+
             <button
               onClick={handleSignOut}
               style={{
-                padding: "8px 16px",
-                background: "white",
-                border: "1px solid #e2e8f0",
-                borderRadius: 8,
+                padding: "10px 18px",
+                background: "transparent",
+                border: "1px solid #e7e8ea",
+                borderRadius: 999,
                 color: "#ef4444",
                 fontWeight: 600,
+                fontSize: 13,
                 cursor: "pointer",
+                transition: "all 0.15s ease",
               }}
             >
               Sign out
@@ -84,21 +118,37 @@ export default function Header() {
           </>
         ) : (
           <>
-            <Link href="/login" style={{ color: "#1d4ed8", fontWeight: 600, textDecoration: "none" }}>
+            <Link
+              href="/login"
+              style={{
+                color: "#111214",
+                fontWeight: 600,
+                fontSize: 13,
+                textDecoration: "none",
+                padding: "10px 16px",
+              }}
+            >
               Sign in
             </Link>
+
             <Link
               href="/register"
               style={{
-                padding: "10px 20px",
-                background: "#1d4ed8",
-                color: "white",
-                borderRadius: 8,
-                textDecoration: "none",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "11px 22px",
+                background: "#111214",
+                color: "#ffffff",
+                borderRadius: 999,
                 fontWeight: 600,
+                fontSize: 13,
+                textDecoration: "none",
+                transition: "transform 0.15s ease, background 0.15s ease",
               }}
             >
-              Register
+              Get started
+              <span style={{ fontSize: 14 }}>→</span>
             </Link>
           </>
         )}

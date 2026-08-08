@@ -1,26 +1,72 @@
+/* app/globals.css */
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #e5e8ec;          /* matches the new design’s page background */
+  --foreground: #111214;
+  --page: #e5e8ec;
+  --surface: #ffffff;
+  --soft: #f4f5f6;
+  --soft-2: #eceeef;
+  --ink: #111214;
+  --muted: #777b80;
+  --faint: #a2a5a9;
+  --line: #e7e8ea;
+  --blue: #4c7df0;
+  --blue-soft: #edf2ff;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-sans: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--page);
+  color: var(--ink);
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  margin: 0;
+  padding: 0;
+}
+
+/* Optional: soft reset so the new design looks consistent */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+img {
+  display: block;
+  max-width: 100%;
+}
+
+/* Make sure the page-shell from the new design sits nicely */
+.page-shell {
+  max-width: 1480px;
+  margin: 22px auto 0;
+  background: var(--surface);
+  border-radius: 34px;
+  overflow: hidden;
+  box-shadow: 0 18px 60px rgba(20, 25, 35, 0.07);
+}
+
+/* Responsive adjustment for the shell */
+@media (max-width: 760px) {
+  .page-shell {
+    margin-top: 0;
+    border-radius: 0;
+  }
 }

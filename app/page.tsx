@@ -1,543 +1,1201 @@
 // app/page.tsx
 "use client";
 
-import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 
-// ─── ALL CONSTANTS FROM CLAUDE ──────────────────────────────────────────────
-const NAV_LINKS = ["How It Works", "For Drivers", "For Shippers", "Pricing"];
-
-const STATS = [
-  { value: "34B", label: "Empty km driven yearly in Europe" },
-  { value: "€38k", label: "Lost per truck per year" },
-  { value: "48h", label: "Avg. hub-based delivery time" },
-  { value: "1200km", label: "Max direct route coverage" },
-];
-
-const PAIN_POINTS = [
-  {
-    who: "DRIVERS",
-    icon: "🚛",
-    color: "#1d4ed8",
-    pains: [
-      { title: "Empty return trips", desc: "Up to 22% of all European truck km are driven empty. Every return leg is lost revenue." },
-      { title: "No direct channel", desc: "No simple platform to post available space and get matched with nearby shippers." },
-      { title: "Broker dependency", desc: "Traditional freight brokers take large margins, leaving drivers with thin earnings." },
-    ],
-  },
-  {
-    who: "SHIPPERS",
-    icon: "📦",
-    color: "#0891b2",
-    pains: [
-      { title: "Slow hub-based freight", desc: "Your pallets pass through 2–3 warehouses before delivery. 2–4 days for what could be 1." },
-      { title: "Hidden costs", desc: "Middleman margins, cross-docking fees, and warehouse handling inflate every shipment." },
-      { title: "No visibility", desc: "You don't know where your freight is, who's handling it, or when it truly arrives." },
-    ],
-  },
-];
-
-const FEATURES = [
-  { icon: "📍", title: "Post Your Route", desc: "Drivers post recurring routes in 2 minutes. Set capacity, dates, and contact preferences. Done.", tag: "FOR DRIVERS", color: "#1d4ed8" },
-  { icon: "🔍", title: "Instant Route Search", desc: "Shippers search by origin, destination, pallet count and date. See available trucks in real time.", tag: "FOR SHIPPERS", color: "#0891b2" },
-  { icon: "🔔", title: "Backhaul Alerts", desc: "Set your regular route once. Get instant SMS when a return load matches your corridor.", tag: "FOR DRIVERS", color: "#1d4ed8" },
-  { icon: "✅", title: "Verified Carriers Only", desc: "Every driver on FTLcargo holds cargo insurance and has passed business verification. No surprises.", tag: "TRUST", color: "#059669" },
-  { icon: "📱", title: "Mobile-First", desc: "Drivers post from the cab. Shippers search from the warehouse. Designed for real-world use.", tag: "PLATFORM", color: "#7c3aed" },
-  { icon: "⚡", title: "Direct Contact", desc: "No payment escrow, no broker layer. You see the driver's number and call directly to agree terms.", tag: "SIMPLE", color: "#d97706" },
-];
-
-const NETWORK_STEPS = [
-  { n: "01", title: "Drivers join first", desc: "Post routes, set capacity, enable backhaul alerts.", icon: "🚛" },
-  { n: "02", title: "Shippers discover routes", desc: "Search available trucks on their corridor in real time.", icon: "📦" },
-  { n: "03", title: "Direct connections made", desc: "Shipper contacts driver. Freight moves without a broker.", icon: "🤝" },
-  { n: "04", title: "Network grows", desc: "More drivers → more routes → more shippers → more loads.", icon: "📈" },
-];
-
-const TESTIMONIALS = [
-  { name: "Mārtiņš K.", role: "Owner-operator, Riga", trucks: "1 truck", quote: "I drive Riga–Berlin every Tuesday. My return was always empty. Now I fill 4–6 pallets every week. That's an extra €600–900 a month I wasn't earning before.", initials: "MK" },
-  { name: "Sandra B.", role: "Logistics coordinator, Tallinn", trucks: "Fleet of 8", quote: "We used DHL for urgent pallet shipments. 3–4 days, expensive. Now our drivers fill their own empties and we use FTLcargo for overflow. Costs dropped 40%.", initials: "SB" },
-  { name: "Tomas V.", role: "Manufacturer, Kaunas", trucks: "Shipper", quote: "Production stopped. We needed a machine part from Hamburg urgently. Found a driver on FTLcargo already heading to Vilnius. Part arrived next morning. Crisis avoided.", initials: "TV" },
-];
-
-const ROUTES_LIVE = [
-  { from: "Riga", to: "Berlin", pallets: 8, date: "Tomorrow", driver: "Andris P.", verified: true, price: "~€190" },
-  { from: "Tallinn", to: "Hamburg", pallets: 12, date: "Wed 12 Mar", driver: "Peeter V.", verified: true, price: "~€230" },
-  { from: "Vilnius", to: "Frankfurt", pallets: 5, date: "Thu 13 Mar", driver: "Lukas M.", verified: true, price: "~€210" },
-  { from: "Kaunas", to: "Berlin", pallets: 9, date: "Fri 14 Mar", driver: "Darius K.", verified: true, price: "~€175" },
-];
-
-// ─── ANIMATED ROUTE MAP (SVG) ───────────────────────────────────────────────
-function RouteMap() {
-  const [progress, setProgress] = useState(0);
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setProgress(p => (p >= 100 ? 0 : p + 0.8));
-    }, 30);
-    return () => clearInterval(interval);
-  }, []);
-
-  const cities = [
-    { id: "tallinn", label: "Tallinn", x: 310, y: 55 },
-    { id: "riga", label: "Riga", x: 290, y: 130 },
-    { id: "vilnius", label: "Vilnius", x: 300, y: 205 },
-    { id: "kaunas", label: "Kaunas", x: 270, y: 225 },
-    { id: "warsaw", label: "Warsaw", x: 265, y: 295 },
-    { id: "berlin", label: "Berlin", x: 155, y: 270 },
-    { id: "hamburg", label: "Hamburg", x: 125, y: 205 },
-    { id: "frankfurt", label: "Frankfurt", x: 110, y: 320 },
-    { id: "munich", label: "Munich", x: 145, y: 375 },
-  ];
-
-  const routes = [
-    { from: [290, 130], to: [155, 270], color: "#3b82f6", active: true },
-    { from: [310, 55], to: [125, 205], color: "#06b6d4", active: true },
-    { from: [300, 205], to: [110, 320], color: "#3b82f6", active: false },
-    { from: [270, 225], to: [155, 270], color: "#6366f1", active: false },
-  ];
-
-  return (
-    <div style={{ position: "relative", width: "100%", height: 440, borderRadius: 16, overflow: "hidden", background: "linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%)" }}>
-      {/* Grid overlay */}
-      <svg width="100%" height="100%" style={{ position: "absolute", opacity: 0.08 }}>
-        {Array.from({ length: 20 }).map((_, i) => (
-          <line key={`h${i}`} x1="0" y1={i * 25} x2="100%" y2={i * 25} stroke="#60a5fa" strokeWidth="0.5" />
-        ))}
-        {Array.from({ length: 30 }).map((_, i) => (
-          <line key={`v${i}`} x1={i * 30} y1="0" x2={i * 30} y2="100%" stroke="#60a5fa" strokeWidth="0.5" />
-        ))}
-      </svg>
-
-      <svg viewBox="0 0 480 440" style={{ width: "100%", height: "100%", position: "absolute" }}>
-        {/* Route lines */}
-        {routes.map((r, i) => {
-          const len = Math.hypot(r.to[0] - r.from[0], r.to[1] - r.from[1]);
-          const dashLen = (progress / 100) * len;
-          return (
-            <g key={i}>
-              <line x1={r.from[0]} y1={r.from[1]} x2={r.to[0]} y2={r.to[1]}
-                stroke={r.color} strokeWidth={r.active ? 1.5 : 0.8}
-                strokeOpacity={r.active ? 0.3 : 0.15} strokeDasharray="4 4" />
-              {r.active && (
-                <line x1={r.from[0]} y1={r.from[1]} x2={r.to[0]} y2={r.to[1]}
-                  stroke={r.color} strokeWidth={2.5}
-                  strokeDasharray={`${dashLen} ${len}`}
-                  strokeLinecap="round" />
-              )}
-            </g>
-          );
-        })}
-
-        {/* Cities */}
-        {cities.map(city => (
-          <g key={city.id}>
-            <circle cx={city.x} cy={city.y} r={5} fill="#1e40af" stroke="#60a5fa" strokeWidth={1.5} />
-            <circle cx={city.x} cy={city.y} r={9} fill="#3b82f6" fillOpacity={0.15} />
-            <text x={city.x + 10} y={city.y + 4} fill="#93c5fd" fontSize={9}
-              fontFamily="var(--font-display)" fontWeight="600">{city.label}</text>
-          </g>
-        ))}
-
-        {/* Moving truck dots */}
-        {routes.filter(r => r.active).map((r, i) => {
-          const t = ((progress + i * 40) % 100) / 100;
-          const cx = r.from[0] + (r.to[0] - r.from[0]) * t;
-          const cy = r.from[1] + (r.to[1] - r.from[1]) * t;
-          return (
-            <g key={`truck${i}`}>
-              <circle cx={cx} cy={cy} r={6} fill={r.color} fillOpacity={0.9} />
-              <circle cx={cx} cy={cy} r={10} fill={r.color} fillOpacity={0.25} />
-              <text x={cx} y={cy + 4} textAnchor="middle" fontSize={7} fill="white">🚛</text>
-            </g>
-          );
-        })}
-      </svg>
-
-      {/* Legend */}
-      <div style={{
-        position: "absolute", bottom: 16, left: 16,
-        background: "rgba(15,23,42,0.85)", backdropFilter: "blur(8px)",
-        border: "1px solid rgba(59,130,246,0.3)",
-        borderRadius: 8, padding: "10px 14px"
-      }}>
-        <div style={{ fontSize: 10, color: "#60a5fa", fontFamily: "var(--font-display)", letterSpacing: 1, marginBottom: 6 }}>LIVE ROUTES</div>
-        {["Riga → Berlin", "Tallinn → Hamburg"].map((r, i) => (
-          <div key={i} style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
-            <div style={{ width: 20, height: 2, background: i === 0 ? "#3b82f6" : "#06b6d4", borderRadius: 1 }} />
-            <span style={{ fontSize: 10, color: "#cbd5e1", fontFamily: "monospace" }}>{r}</span>
-          </div>
-        ))}
-      </div>
-
-      <div style={{
-        position: "absolute", top: 16, right: 16,
-        background: "rgba(15,23,42,0.85)", backdropFilter: "blur(8px)",
-        border: "1px solid rgba(16,185,129,0.4)",
-        borderRadius: 8, padding: "8px 14px",
-        display: "flex", alignItems: "center", gap: 6
-      }}>
-        <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#10b981", animation: "pulse2 2s infinite" }} />
-        <span style={{ fontSize: 10, color: "#6ee7b7", fontFamily: "var(--font-display)", letterSpacing: 1 }}>LIVE TRACKING</span>
-      </div>
-    </div>
-  );
-}
-
-// ─── MAIN HOMEPAGE ───────────────────────────────────────────────────────────
 export default function Home() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState("driver");
-  const [searchFrom, setSearchFrom] = useState("");
-  const [searchTo, setSearchTo] = useState("");
-  const [visibleSections, setVisibleSections] = useState<Record<string, boolean>>({});
-  const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      entries => entries.forEach(e => {
-        if (e.isIntersecting) setVisibleSections(prev => ({ ...prev, [e.target.id]: true }));
-      }),
-      { threshold: 0.1 }
-    );
-    Object.values(sectionRefs.current).forEach(el => el && observer.observe(el));
-    return () => observer.disconnect();
-  }, []);
-
-  const registerRef = (id: string) => (el: HTMLElement | null) => { sectionRefs.current[id] = el; };
-
-  const fadeIn = (id: string, delay = 0) => ({
-    opacity: visibleSections[id] ? 1 : 0,
-    transform: visibleSections[id] ? "translateY(0)" : "translateY(28px)",
-    transition: `all 0.6s ease ${delay}s`,
-  });
 
   return (
-    <>
-      <div style={{ fontFamily: "var(--font-body)", background: "#f8fafc", color: "#0f172a", overflowX: "hidden" }}>
-        <style>{`
-          :root {
-            --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            --font-body: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    <div className="page-shell">
+      <style jsx global>{`
+        :root {
+          --page: #e5e8ec;
+          --surface: #fff;
+          --soft: #f4f5f6;
+          --soft-2: #eceeef;
+          --ink: #111214;
+          --muted: #777b80;
+          --faint: #a2a5a9;
+          --line: #e7e8ea;
+          --blue: #4c7df0;
+          --blue-soft: #edf2ff;
+          --radius-xl: 34px;
+          --radius-lg: 24px;
+          --radius-md: 16px;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; }
+        body {
+          background: var(--page);
+          color: var(--ink);
+          font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+          -webkit-font-smoothing: antialiased;
+        }
+        a { color: inherit; text-decoration: none; }
+        button, input { font: inherit; }
+        img { display: block; max-width: 100%; }
+
+        .page-shell {
+          max-width: 1480px;
+          margin: 22px auto 0;
+          background: var(--surface);
+          border-radius: var(--radius-xl);
+          overflow: hidden;
+          box-shadow: 0 18px 60px rgba(20, 25, 35, 0.07);
+        }
+
+        .container {
+          width: min(100% - 72px, 1240px);
+          margin: 0 auto;
+        }
+
+        /* NAV */
+        .nav {
+          height: 84px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 28px;
+        }
+        .brand {
+          display: flex;
+          align-items: center;
+          gap: 11px;
+          flex-shrink: 0;
+          cursor: pointer;
+        }
+        .brand-mark {
+          width: 42px;
+          height: 42px;
+          border: 1.5px solid var(--ink);
+          border-radius: 12px;
+          display: grid;
+          place-items: center;
+        }
+        .brand-copy strong {
+          display: block;
+          font-size: 15px;
+          line-height: 1.15;
+          letter-spacing: -0.02em;
+        }
+        .brand-copy span {
+          display: block;
+          margin-top: 3px;
+          color: var(--muted);
+          font-size: 10px;
+          line-height: 1.2;
+        }
+        .nav-links {
+          display: flex;
+          align-items: center;
+          gap: 2px;
+          margin-left: auto;
+        }
+        .nav-links a {
+          color: var(--muted);
+          font-size: 12px;
+          font-weight: 500;
+          padding: 10px 15px;
+          border-radius: 999px;
+          transition: 0.18s ease;
+        }
+        .nav-links a:hover { color: var(--ink); }
+        .nav-links a.active {
+          color: #fff;
+          background: var(--ink);
+        }
+        .nav-actions {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+        .icon-button {
+          width: 42px;
+          height: 42px;
+          display: grid;
+          place-items: center;
+          border-radius: 50%;
+          background: var(--soft);
+        }
+        .button {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 9px;
+          min-height: 46px;
+          padding: 0 20px;
+          border-radius: 999px;
+          border: 1px solid transparent;
+          font-size: 12px;
+          font-weight: 600;
+          white-space: nowrap;
+          transition: 0.18s ease;
+          cursor: pointer;
+        }
+        .button-dark {
+          background: var(--ink);
+          color: #fff;
+        }
+        .button-dark:hover {
+          transform: translateY(-1px);
+          background: #000;
+        }
+        .button-light {
+          background: #fff;
+          border-color: var(--line);
+        }
+        .button-light:hover {
+          border-color: #bfc2c6;
+        }
+
+        /* HERO */
+        .hero {
+          display: grid;
+          grid-template-columns: 0.92fr 1.08fr;
+          min-height: 690px;
+          gap: 34px;
+          padding: 18px 18px 18px 38px;
+        }
+        .hero-copy {
+          display: flex;
+          flex-direction: column;
+          padding: 54px 0 0;
+        }
+        .eyebrow {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          width: max-content;
+          color: var(--blue);
+          background: var(--blue-soft);
+          border-radius: 999px;
+          padding: 7px 12px 7px 8px;
+          font-size: 10px;
+          font-weight: 700;
+          letter-spacing: 0.02em;
+        }
+        .eyebrow-dot {
+          width: 7px;
+          height: 7px;
+          border-radius: 50%;
+          background: var(--blue);
+        }
+        .hero h1 {
+          max-width: 650px;
+          margin: 20px 0 16px;
+          font-size: clamp(48px, 5.1vw, 70px);
+          line-height: 0.99;
+          letter-spacing: -0.055em;
+          font-weight: 700;
+        }
+        .hero h1 .muted {
+          display: block;
+          color: #b0b3b7;
+        }
+        .hero-lead {
+          max-width: 450px;
+          color: var(--muted);
+          font-size: 14px;
+          line-height: 1.65;
+        }
+        .hero-actions {
+          display: flex;
+          gap: 10px;
+          flex-wrap: wrap;
+          margin-top: 25px;
+        }
+        .play {
+          width: 20px;
+          height: 20px;
+          border-radius: 50%;
+          display: grid;
+          place-items: center;
+          background: var(--ink);
+        }
+        .proof {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          margin: 22px 0 0;
+        }
+        .avatars { display: flex; }
+        .avatar {
+          width: 30px;
+          height: 30px;
+          margin-left: -7px;
+          border: 2px solid #fff;
+          border-radius: 50%;
+          display: grid;
+          place-items: center;
+          background: #d8dadd;
+          color: #666a6f;
+          font-size: 9px;
+          font-weight: 700;
+        }
+        .avatar:first-child { margin-left: 0; }
+        .proof strong { display: block; font-size: 13px; }
+        .proof span {
+          display: block;
+          color: var(--muted);
+          font-size: 10px;
+          margin-top: 2px;
+        }
+
+        .hero-benefits {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 20px;
+          margin-top: auto;
+          padding: 28px 0 4px;
+          border-top: 1px solid var(--line);
+        }
+        .benefit svg {
+          width: 19px;
+          height: 19px;
+          margin-bottom: 10px;
+        }
+        .benefit span {
+          display: block;
+          max-width: 115px;
+          color: #686c71;
+          font-size: 10.5px;
+          line-height: 1.4;
+          font-weight: 500;
+        }
+
+        .hero-nav {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding-top: 22px;
+        }
+        .hero-counter {
+          color: var(--muted);
+          font-size: 11px;
+        }
+        .hero-counter strong { color: var(--ink); }
+        .hero-arrows { display: flex; gap: 7px; }
+        .round-button {
+          width: 32px;
+          height: 32px;
+          border: 1px solid var(--line);
+          border-radius: 50%;
+          background: #fff;
+          display: grid;
+          place-items: center;
+          color: var(--ink);
+          cursor: pointer;
+        }
+
+        /* HERO VISUAL */
+        .hero-visual {
+          position: relative;
+          min-height: 650px;
+          border-radius: 28px;
+          overflow: hidden;
+          background:
+            radial-gradient(circle at 72% 22%, rgba(255, 255, 255, 0.8), transparent 25%),
+            linear-gradient(145deg, #dce4ec 0%, #c9d2dd 48%, #e9ecee 100%);
+        }
+        .hero-visual img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          object-position: center;
+        }
+        .image-placeholder {
+          position: absolute;
+          inset: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 40px;
+          text-align: center;
+          color: #69717b;
+          font-size: 13px;
+          line-height: 1.5;
+          background:
+            radial-gradient(circle at 70% 22%, rgba(255, 255, 255, 0.75), transparent 24%),
+            linear-gradient(145deg, #dbe4ed, #cbd4de 48%, #e8ebed);
+        }
+        .image-placeholder strong {
+          display: block;
+          color: #22262b;
+          font-size: 16px;
+          margin-bottom: 5px;
+        }
+        .hero-image-loaded .image-placeholder { display: none; }
+        .visual-tag {
+          position: absolute;
+          top: 22px;
+          right: 22px;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: 11px 14px;
+          border-radius: 15px;
+          background: rgba(255, 255, 255, 0.9);
+          backdrop-filter: blur(10px);
+          box-shadow: 0 12px 30px rgba(25, 35, 50, 0.08);
+        }
+        .visual-tag .tag-icon {
+          width: 28px;
+          height: 28px;
+          display: grid;
+          place-items: center;
+          border-radius: 9px;
+          background: var(--soft);
+        }
+        .visual-tag strong { display: block; font-size: 11px; }
+        .visual-tag span {
+          display: block;
+          color: var(--muted);
+          font-size: 9px;
+          margin-top: 2px;
+        }
+
+        .process {
+          position: absolute;
+          left: 20px;
+          right: 20px;
+          bottom: 20px;
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 8px;
+          padding: 14px 16px;
+          border-radius: 17px;
+          background: rgba(17, 18, 20, 0.66);
+          backdrop-filter: blur(12px);
+        }
+        .process-item {
+          display: flex;
+          align-items: center;
+          gap: 7px;
+        }
+        .process-num {
+          color: rgba(255, 255, 255, 0.45);
+          font-size: 9px;
+          font-weight: 700;
+        }
+        .process-label {
+          color: #fff;
+          font-size: 10px;
+          font-weight: 600;
+        }
+        .process-arrow {
+          color: rgba(255, 255, 255, 0.4);
+          margin-left: auto;
+        }
+
+        /* SECTIONS */
+        .section { padding: 112px 0; }
+        .section-tight { padding-top: 0; }
+        .section-header {
+          max-width: 650px;
+          margin-bottom: 42px;
+        }
+        .section-kicker {
+          color: var(--blue);
+          font-size: 10px;
+          font-weight: 700;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+          margin-bottom: 13px;
+        }
+        .section h2 {
+          font-size: clamp(32px, 3.5vw, 46px);
+          line-height: 1.05;
+          letter-spacing: -0.045em;
+          font-weight: 700;
+        }
+        .section-header p {
+          margin-top: 14px;
+          color: var(--muted);
+          font-size: 14px;
+          line-height: 1.65;
+          max-width: 570px;
+        }
+
+        /* COMPARISON */
+        .comparison {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          border: 1px solid var(--line);
+          border-radius: 24px;
+          overflow: hidden;
+        }
+        .compare-col { padding: 34px; }
+        .compare-col:first-child { background: #f3f4f5; }
+        .compare-col:last-child { background: #fff; }
+        .compare-title {
+          font-size: 11px;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.06em;
+          color: var(--muted);
+          margin-bottom: 28px;
+        }
+        .compare-row {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 20px;
+          padding: 17px 0;
+          border-top: 1px solid rgba(0, 0, 0, 0.08);
+        }
+        .compare-row strong { font-size: 13px; }
+        .compare-row span {
+          font-size: 12px;
+          color: var(--muted);
+          line-height: 1.45;
+        }
+
+        /* HOW */
+        .how-grid {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 1px;
+          background: var(--line);
+          border-radius: 22px;
+          overflow: hidden;
+        }
+        .how-step {
+          background: #fff;
+          padding: 30px 26px 32px;
+        }
+        .how-num {
+          width: 32px;
+          height: 32px;
+          border-radius: 50%;
+          display: grid;
+          place-items: center;
+          background: var(--ink);
+          color: #fff;
+          font-size: 10px;
+          font-weight: 700;
+          margin-bottom: 20px;
+        }
+        .how-step h3 {
+          font-size: 14px;
+          margin-bottom: 8px;
+        }
+        .how-step p {
+          color: var(--muted);
+          font-size: 12px;
+          line-height: 1.6;
+        }
+
+        /* CARRIER */
+        .carrier {
+          display: grid;
+          grid-template-columns: 0.85fr 1.15fr;
+          gap: 72px;
+          align-items: center;
+        }
+        .carrier p {
+          max-width: 470px;
+          color: var(--muted);
+          font-size: 14px;
+          line-height: 1.65;
+          margin: 15px 0 24px;
+        }
+        .stats {
+          display: flex;
+          gap: 34px;
+          margin-top: 30px;
+        }
+        .stat strong {
+          display: block;
+          font-size: 22px;
+          letter-spacing: -0.03em;
+        }
+        .stat span {
+          display: block;
+          color: var(--muted);
+          font-size: 10px;
+          margin-top: 4px;
+        }
+
+        .capacity {
+          padding: 30px;
+          border-radius: 24px;
+          background: #f1f2f3;
+        }
+        .capacity-head {
+          display: flex;
+          justify-content: space-between;
+          gap: 15px;
+          color: var(--muted);
+          font-size: 10px;
+          font-weight: 600;
+          margin-bottom: 27px;
+        }
+        .capacity-row { margin-bottom: 23px; }
+        .capacity-label {
+          display: flex;
+          justify-content: space-between;
+          margin-bottom: 9px;
+        }
+        .capacity-label strong { font-size: 12px; }
+        .capacity-label span {
+          font-size: 11px;
+          font-weight: 700;
+        }
+        .bar {
+          height: 13px;
+          border-radius: 99px;
+          background: #dedfe1;
+          overflow: hidden;
+        }
+        .fill {
+          height: 100%;
+          border-radius: 99px;
+        }
+        .fill-old {
+          width: 22%;
+          background: #bfc1c5;
+        }
+        .fill-match {
+          width: 91%;
+          background: linear-gradient(90deg, #111 0 24%, var(--blue) 24% 100%);
+        }
+        .capacity-note {
+          color: #9a9da1;
+          font-size: 10px;
+        }
+
+        /* TRUST */
+        .trust-grid {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 20px;
+        }
+        .trust-card {
+          padding: 28px;
+          border-radius: 20px;
+          background: #f2f3f4;
+        }
+        .trust-icon {
+          width: 38px;
+          height: 38px;
+          border: 1px solid #d7d9dc;
+          border-radius: 11px;
+          display: grid;
+          place-items: center;
+          margin-bottom: 22px;
+          font-size: 16px;
+        }
+        .trust-card h3 {
+          font-size: 14px;
+          margin-bottom: 8px;
+        }
+        .trust-card p {
+          color: var(--muted);
+          font-size: 12px;
+          line-height: 1.6;
+        }
+
+        /* CTA */
+        .cta { padding: 0 0 112px; }
+        .cta-inner {
+          position: relative;
+          overflow: hidden;
+          border-radius: 30px;
+          background: var(--ink);
+          color: #fff;
+          text-align: center;
+          padding: 76px 30px;
+        }
+        .cta-inner:after {
+          content: "";
+          position: absolute;
+          width: 420px;
+          height: 420px;
+          right: -150px;
+          top: -220px;
+          border-radius: 50%;
+          background: rgba(76, 125, 240, 0.13);
+        }
+        .cta h2 {
+          position: relative;
+          z-index: 1;
+          font-size: clamp(34px, 4vw, 52px);
+          line-height: 1.05;
+          letter-spacing: -0.05em;
+        }
+        .cta h2 span { color: #777b80; }
+        .cta p {
+          position: relative;
+          z-index: 1;
+          max-width: 460px;
+          margin: 15px auto 0;
+          color: #9b9ea2;
+          font-size: 13px;
+          line-height: 1.6;
+        }
+        .cta-actions {
+          position: relative;
+          z-index: 1;
+          display: flex;
+          justify-content: center;
+          gap: 10px;
+          margin-top: 28px;
+        }
+        .cta .button-dark {
+          background: #fff;
+          color: var(--ink);
+        }
+        .cta .button-light {
+          background: transparent;
+          color: #fff;
+          border-color: #45474b;
+        }
+
+        /* FOOTER */
+        footer {
+          background: var(--ink);
+          color: #9b9da1;
+          padding: 52px 0 25px;
+        }
+        .footer-top {
+          display: flex;
+          justify-content: space-between;
+          gap: 50px;
+          padding-bottom: 40px;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .footer-brand { max-width: 300px; }
+        .footer-brand .brand-copy strong { color: #fff; }
+        .footer-brand .brand-mark { border-color: #fff; }
+        .footer-brand p {
+          font-size: 11px;
+          line-height: 1.65;
+          margin-top: 15px;
+        }
+        .footer-cols {
+          display: flex;
+          gap: 70px;
+        }
+        .footer-col h4 {
+          color: #666a70;
+          font-size: 9px;
+          text-transform: uppercase;
+          letter-spacing: 0.08em;
+          margin-bottom: 14px;
+        }
+        .footer-col a {
+          display: block;
+          font-size: 11px;
+          margin-bottom: 9px;
+        }
+        .footer-col a:hover { color: #fff; }
+        .footer-bottom {
+          display: flex;
+          justify-content: space-between;
+          padding-top: 20px;
+          color: #666a70;
+          font-size: 10px;
+        }
+
+        /* RESPONSIVE */
+        @media (max-width: 1050px) {
+          .nav-links { display: none; }
+          .hero {
+            grid-template-columns: 1fr;
+            padding: 18px;
           }
-
-          *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-          ::-webkit-scrollbar { width: 5px; }
-          ::-webkit-scrollbar-thumb { background: #3b82f6; border-radius: 10px; }
-
-          @keyframes pulse2 { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.5); opacity: 0.5; } }
-          @keyframes heroFadeUp { from { opacity: 0; transform: translateY(40px); } to { opacity: 1; transform: translateY(0); } }
-          @keyframes float { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-8px); } }
-          @keyframes slideInRight { from { opacity: 0; transform: translateX(30px); } to { opacity: 1; transform: translateX(0); } }
-
-          /* ─── RESPONSIVE OVERRIDES ─────────────────────────────────────── */
-          @media (max-width: 900px) {
-            .ftl-hero-section { padding: 64px 20px 56px !important; }
-            .ftl-hero-grid { grid-template-columns: 1fr !important; gap: 40px !important; }
-            .ftl-hero-copy { max-width: 100% !important; }
-
-            .ftl-search-section { padding: 0 16px !important; }
-            .ftl-search-card {
-              flex-direction: column !important;
-              align-items: stretch !important;
-              padding: 16px !important;
-              transform: translateY(-20px) !important;
-              gap: 12px !important;
-            }
-            .ftl-search-tabs { margin-right: 0 !important; }
-            .ftl-search-divider { display: none !important; }
-            .ftl-search-fields {
-              grid-template-columns: 1fr 1fr !important;
-              gap: 8px !important;
-            }
-            .ftl-search-field { border-right: none !important; padding: 8px 10px !important; }
-            .ftl-search-btn { width: 100% !important; }
-
-            .ftl-routes-section { padding: 16px 16px 56px !important; }
-            .ftl-routes-wrapper { overflow-x: auto !important; -webkit-overflow-scrolling: touch !important; }
-            .ftl-routes-grid { grid-template-columns: 160px 130px 90px 100px 120px !important; min-width: 620px !important; }
-
-            .ftl-pains-section { padding: 56px 20px !important; }
-            .ftl-pains-grid { grid-template-columns: 1fr !important; gap: 28px !important; }
-
-            .ftl-footer-grid { grid-template-columns: 1fr 1fr !important; gap: 32px !important; }
+          .hero-copy { padding: 35px 20px 0; }
+          .hero-visual { min-height: 520px; }
+          .hero-benefits { margin-top: 55px; }
+          .carrier {
+            grid-template-columns: 1fr;
+            gap: 40px;
           }
-
-          @media (max-width: 520px) {
-            .ftl-hero-stats { gap: 20px !important; }
-            .ftl-hero-btns button { width: 100% !important; justify-content: center !important; }
-            .ftl-search-fields { grid-template-columns: 1fr !important; }
-            .ftl-footer-grid { grid-template-columns: 1fr !important; }
+        }
+        @media (max-width: 760px) {
+          .page-shell {
+            margin-top: 0;
+            border-radius: 0;
           }
-
-          /* ─── BUTTONS ─────────────────────────────────────────────────── */
-          .btn-primary {
-            font-family: var(--font-display);
-            background: linear-gradient(135deg, #3b82f6, #22d3ee);
-            color: #0b1120;
-            font-weight: 700;
-            border: none;
-            border-radius: 10px;
-            padding: 15px 32px;
-            font-size: 16px;
-            cursor: pointer;
-            box-shadow: 0 8px 24px rgba(59,130,246,0.35);
-            transition: transform 0.15s ease, box-shadow 0.15s ease;
+          .container {
+            width: min(100% - 40px, 1240px);
           }
-          .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 12px 30px rgba(59,130,246,0.45); }
-          .btn-primary:active { transform: translateY(0); }
-
-          .btn-ghost {
-            font-family: var(--font-display);
-            background: rgba(255,255,255,0.06);
-            color: #ffffff;
-            font-weight: 600;
-            border: 1.5px solid rgba(255,255,255,0.28);
-            border-radius: 10px;
-            padding: 15px 32px;
-            font-size: 16px;
-            cursor: pointer;
-            transition: background 0.15s ease, border-color 0.15s ease;
+          .nav { height: 74px; }
+          .nav-actions .icon-button { display: none; }
+          .hero { padding: 0 0 15px; }
+          .hero-copy { padding: 35px 20px 0; }
+          .hero h1 { font-size: 46px; }
+          .hero-benefits {
+            grid-template-columns: 1fr 1fr;
+            gap: 25px 18px;
           }
-          .btn-ghost:hover { background: rgba(255,255,255,0.12); border-color: rgba(255,255,255,0.45); }
-        `}</style>
+          .hero-visual {
+            border-radius: 20px;
+            min-height: 470px;
+          }
+          .process {
+            grid-template-columns: 1fr 1fr;
+          }
+          .comparison {
+            grid-template-columns: 1fr;
+          }
+          .how-grid,
+          .trust-grid {
+            grid-template-columns: 1fr;
+          }
+          .section { padding: 80px 0; }
+          .cta { padding-bottom: 80px; }
+          .cta-inner { padding: 60px 22px; }
+          .cta-actions { flex-wrap: wrap; }
+          .footer-top { flex-direction: column; }
+          .footer-cols { gap: 45px; }
+          .footer-bottom {
+            flex-direction: column;
+            gap: 8px;
+          }
+        }
+      `}</style>
 
-        {/* ─── HERO with FTL Cargo Logo (you can also import Header component here) ─── */}
-        <section className="ftl-hero-section" style={{
-          background: "linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #0c4a6e 100%)",
-          padding: "100px 24px 80px",
-          position: "relative",
-          overflow: "hidden"
-        }}>
-          <div style={{ position: "absolute", inset: 0, backgroundImage: "radial-gradient(circle at 70% 40%, rgba(59,130,246,0.15) 0%, transparent 60%), radial-gradient(circle at 20% 80%, rgba(6,182,212,0.1) 0%, transparent 50%)" }} />
-          <div className="ftl-hero-grid" style={{ maxWidth: 1160, margin: "0 auto", position: "relative", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 60, alignItems: "center" }}>
-            <div className="ftl-hero-copy" style={{ animation: "heroFadeUp 0.8s ease both" }}>
-              <div style={{
-                display: "inline-flex", alignItems: "center", gap: 8,
-                background: "rgba(59,130,246,0.15)", border: "1px solid rgba(59,130,246,0.4)",
-                borderRadius: 20, padding: "6px 14px", marginBottom: 24
-              }}>
-                <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#34d399", animation: "pulse2 2s infinite" }} />
-                <span style={{ fontSize: 12, color: "#93c5fd", fontWeight: 600, letterSpacing: 0.5 }}>847 active routes live now</span>
-              </div>
-
-              <h1 style={{
-                fontFamily: "var(--font-display)", fontWeight: 800,
-                fontSize: "clamp(32px, 4.5vw, 58px)",
-                lineHeight: 1.1, color: "white", marginBottom: 20, letterSpacing: -1
-              }}>
-                Fill Your Empty<br />
-                <span style={{ background: "linear-gradient(90deg, #60a5fa, #22d3ee)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-                  Truck Space.
-                </span><br />
-                <span style={{ color: "rgba(255,255,255,0.65)", fontWeight: 600, fontSize: "0.75em" }}>Earn on Every Route.</span>
-              </h1>
-
-              <p style={{ fontFamily: "var(--font-body)", fontSize: 17, color: "#94a3b8", lineHeight: 1.75, marginBottom: 36, maxWidth: 460 }}>
-                FTLcargo connects verified truck drivers with shippers needing direct pallet delivery — no hubs, no brokers, no empty miles. Post your route in 2 minutes.
-              </p>
-
-              <div className="ftl-hero-btns" style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 48 }}>
-                <button className="btn-primary" style={{ fontSize: 16, padding: "15px 32px" }} onClick={() => router.push("/register")}>
-                  🚛 I'm a Driver — Post Route
-                </button>
-                <button className="btn-ghost" onClick={() => router.push("/register")}>
-                  📦 I Need to Ship Pallets
-                </button>
-              </div>
-
-              <div className="ftl-hero-stats" style={{ display: "flex", gap: 32, flexWrap: "wrap" }}>
-                {STATS.map((s, i) => (
-                  <div key={i} style={{ animation: `heroFadeUp 0.8s ease ${0.1 + i * 0.1}s both` }}>
-                    <div style={{ fontFamily: "var(--font-display)", fontSize: 26, fontWeight: 800, color: "white" }}>{s.value}</div>
-                    <div style={{ fontSize: 11, color: "#64748b", lineHeight: 1.4, maxWidth: 100 }}>{s.label}</div>
-                  </div>
-                ))}
-              </div>
+      {/* NAV */}
+      <div className="container">
+        <nav className="nav">
+          <div className="brand" onClick={() => router.push("/")}>
+            <div className="brand-mark">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+                <path d="M3 7l9-4 9 4-9 4-9-4z" />
+                <path d="M3 7v10l9 4 9-4V7" />
+                <path d="M12 11v10" />
+              </svg>
             </div>
-
-            <div style={{ animation: "slideInRight 0.9s ease 0.3s both" }}>
-              <RouteMap />
+            <div className="brand-copy">
+              <strong>FTLcargo</strong>
+              <span>
+                Direct freight
+                <br />
+                across Europe
+              </span>
             </div>
           </div>
-        </section>
 
-        {/* ─── QUICK SEARCH ─── */}
-        <section className="ftl-search-section" style={{ background: "white", borderBottom: "1px solid #e2e8f0", padding: "0 24px" }}>
-          <div style={{ maxWidth: 1160, margin: "0 auto" }}>
-            <div className="ftl-search-card" style={{
-              background: "white", boxShadow: "0 4px 30px rgba(0,0,0,0.08)",
-              borderRadius: 14, padding: "6px 6px 6px 24px",
-              display: "flex", alignItems: "center",
-              border: "1px solid #e2e8f0",
-              transform: "translateY(-28px)",
-              flexWrap: "wrap"
-            }}>
-              <div className="ftl-search-tabs" style={{ display: "flex", gap: 4, marginRight: 16 }}>
-                {["driver", "shipper"].map(t => (
-                  <button key={t} onClick={() => setActiveTab(t)} style={{
-                    padding: "10px 24px", borderRadius: 6, border: "none",
-                    fontFamily: "var(--font-display)", fontSize: 14, fontWeight: 600,
-                    background: activeTab === t ? "#1d4ed8" : "transparent",
-                    color: activeTab === t ? "white" : "#64748b",
-                  }}>
-                    {t === "driver" ? "🚛 Post Route" : "📦 Find Truck"}
-                  </button>
-                ))}
-              </div>
-
-              <div className="ftl-search-divider" style={{ width: 1, height: 40, background: "#e2e8f0", margin: "0 12px" }} />
-
-              <div className="ftl-search-fields" style={{ flex: 1, display: "grid", gridTemplateColumns: "1fr 1fr 80px 100px", gap: 1 }}>
-                <div className="ftl-search-field" style={{ padding: "8px 16px", borderRight: "1px solid #f1f5f9" }}>
-                  <div style={{ fontSize: 10, color: "#94a3b8", fontWeight: 600, letterSpacing: 1, marginBottom: 2 }}>FROM</div>
-                  <input style={{ border: "none", outline: "none", width: "100%", fontSize: 15, fontWeight: 500, background: "transparent", fontFamily: "var(--font-body)" }}
-                    placeholder="Riga, Latvia" value={searchFrom} onChange={e => setSearchFrom(e.target.value)} />
-                </div>
-                <div className="ftl-search-field" style={{ padding: "8px 16px", borderRight: "1px solid #f1f5f9" }}>
-                  <div style={{ fontSize: 10, color: "#94a3b8", fontWeight: 600, letterSpacing: 1, marginBottom: 2 }}>TO</div>
-                  <input style={{ border: "none", outline: "none", width: "100%", fontSize: 15, fontWeight: 500, background: "transparent", fontFamily: "var(--font-body)" }}
-                    placeholder="Berlin, Germany" value={searchTo} onChange={e => setSearchTo(e.target.value)} />
-                </div>
-                <div className="ftl-search-field" style={{ padding: "8px 16px", borderRight: "1px solid #f1f5f9" }}>
-                  <div style={{ fontSize: 10, color: "#94a3b8", fontWeight: 600, letterSpacing: 1, marginBottom: 2 }}>PALLETS</div>
-                  <select style={{ border: "none", outline: "none", fontSize: 15, fontWeight: 500, background: "transparent", width: "100%", fontFamily: "var(--font-body)" }}>
-                    {[1,2,3,4,5,6].map(n => <option key={n}>{n}</option>)}
-                  </select>
-                </div>
-                <div className="ftl-search-field" style={{ padding: "8px 16px" }}>
-                  <div style={{ fontSize: 10, color: "#94a3b8", fontWeight: 600, letterSpacing: 1, marginBottom: 2 }}>DATE</div>
-                  <input type="date" style={{ border: "none", outline: "none", fontSize: 13, fontWeight: 500, background: "transparent", width: "100%", fontFamily: "var(--font-body)" }} />
-                </div>
-              </div>
-
-              <button className="ftl-search-btn" style={{ borderRadius: 10, padding: "18px 32px", fontSize: 15, flexShrink: 0, margin: 4, background: "#1d4ed8", color: "white", border: "none", fontFamily: "var(--font-display)" }}>
-                Search →
-              </button>
-            </div>
+          <div className="nav-links">
+            <a className="active" href="#">
+              Home
+            </a>
+            <a href="#shippers">Shippers</a>
+            <a href="#carriers">Carriers</a>
+            <a href="#how">How it works</a>
+            <a href="#trust">Trust</a>
+            <a href="#contact">Contact</a>
           </div>
-        </section>
 
-        {/* ─── LIVE ROUTES ─── */}
-        <section id="live-routes" ref={registerRef("live-routes")} className="ftl-routes-section" style={{ padding: "20px 24px 80px" }}>
-          <div style={{ maxWidth: 1160, margin: "0 auto", ...fadeIn("live-routes") }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
-              <div>
-                <h2 style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 22, marginBottom: 4 }}>Live Routes This Week</h2>
-                <p style={{ color: "#64748b", fontSize: 14 }}>Available truck space on the Baltics → Germany corridor</p>
-              </div>
-              <span style={{ fontSize: 13, color: "#3b82f6", cursor: "pointer", fontWeight: 600 }}>View all routes →</span>
-            </div>
-
-            <div className="ftl-routes-wrapper" style={{ background: "white", borderRadius: 14, overflow: "hidden", border: "1px solid #e2e8f0" }}>
-              <div className="ftl-routes-grid" style={{ display: "grid", gridTemplateColumns: "2fr 1.5fr 1fr 1fr 1fr", gap: 12, padding: "12px 20px", background: "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>
-                {["Route", "Driver", "Capacity", "Departure", "Est. Price"].map(h => (
-                  <span key={h} style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", letterSpacing: 0.5 }}>{h.toUpperCase()}</span>
-                ))}
-              </div>
-
-              {ROUTES_LIVE.map((r, i) => (
-                <div key={i} className="ftl-routes-grid" style={{
-                  display: "grid",
-                  gridTemplateColumns: "2fr 1.5fr 1fr 1fr 1fr",
-                  gap: 12,
-                  padding: "16px 20px",
-                  borderBottom: i < ROUTES_LIVE.length - 1 ? "1px solid #f1f5f9" : "none",
-                  transition: "background 0.15s",
-                }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <span style={{ fontWeight: 700, fontSize: 15 }}>{r.from}</span>
-                    <span style={{ color: "#3b82f6", fontSize: 14, fontWeight: 700 }}>→</span>
-                    <span style={{ fontWeight: 700, fontSize: 15 }}>{r.to}</span>
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <div style={{ width: 30, height: 30, borderRadius: "50%", background: "linear-gradient(135deg,#dbeafe,#bfdbfe)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, color: "#1d4ed8" }}>
-                      {r.driver.split(" ").map(n => n[0]).join("")}
-                    </div>
-                    <div>
-                      <div style={{ fontSize: 13, fontWeight: 600 }}>{r.driver}</div>
-                      {r.verified && <div style={{ fontSize: 10, color: "#10b981", fontWeight: 600 }}>✓ Verified</div>}
-                    </div>
-                  </div>
-                  <div>
-                    <span style={{ fontWeight: 600, fontSize: 14 }}>{r.pallets}</span>
-                    <span style={{ color: "#94a3b8", fontSize: 13 }}> pallets</span>
-                  </div>
-                  <div style={{ fontSize: 13, fontWeight: 500, color: "#0f172a" }}>{r.date}</div>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                    <span style={{ fontFamily: "var(--font-display)", fontWeight: 700, color: "#1d4ed8", fontSize: 16 }}>{r.price}</span>
-                    <button style={{ background: "#eff6ff", border: "1px solid #bfdbfe", color: "#1d4ed8", padding: "6px 14px", borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Contact</button>
-                  </div>
-                </div>
-              ))}
-            </div>
+          <div className="nav-actions">
+            <a className="icon-button" href="tel:+0000000000" aria-label="Call FTLcargo">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 .14 4.22 2 2 0 0 1 2.13 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L6.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.9.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z" />
+              </svg>
+            </a>
+            <button className="button button-light" onClick={() => router.push("/register")}>
+              Get a quote <span>→</span>
+            </button>
           </div>
-        </section>
-
-        {/* ─── PAIN POINTS ─── */}
-        <section id="pains" ref={registerRef("pains")} className="ftl-pains-section" style={{ background: "#f1f5f9", padding: "80px 24px" }}>
-          <div style={{ maxWidth: 1160, margin: "0 auto" }}>
-            <div style={{ textAlign: "center", marginBottom: 60, ...fadeIn("pains") }}>
-              <span style={{ fontSize: 12, fontWeight: 700, color: "#1d4ed8", letterSpacing: 2, textTransform: "uppercase" }}>The Problem</span>
-              <h2 style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: "clamp(28px, 3vw, 42px)", marginTop: 8, marginBottom: 16 }}>Freight is broken for everyone</h2>
-              <p style={{ fontFamily: "var(--font-body)", color: "#64748b", fontSize: 17, maxWidth: 540, margin: "0 auto", lineHeight: 1.7 }}>
-                Drivers lose money on empty miles. Shippers overpay for slow, opaque logistics. FTLcargo fixes both.
-              </p>
-            </div>
-
-            <div className="ftl-pains-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 32 }}>
-              {PAIN_POINTS.map((group, gi) => (
-                <div key={gi} style={{ ...fadeIn("pains", gi * 0.15) }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
-                    <span style={{ fontSize: 24 }}>{group.icon}</span>
-                    <div>
-                      <div style={{ fontSize: 11, fontWeight: 700, color: group.color, letterSpacing: 1.5 }}>{group.who}</div>
-                      <div style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 20 }}>
-                        {gi === 0 ? "Drivers are losing money daily" : "Shippers are stuck in the old system"}
-                      </div>
-                    </div>
-                  </div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                    {group.pains.map((p, pi) => (
-                      <div key={pi} style={{
-                        background: "white", borderRadius: 12, padding: "20px", borderLeft: `3px solid ${group.color}`,
-                        boxShadow: "0 2px 12px rgba(0,0,0,0.05)",
-                      }}>
-                        <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 6 }}>{p.title}</div>
-                        <div style={{ fontFamily: "var(--font-body)", fontSize: 14, color: "#64748b", lineHeight: 1.6 }}>{p.desc}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* FEATURES, NETWORK EFFECT, TESTIMONIALS, etc. - add the rest of your original sections here */}
-
-        {/* Example footer with new logo */}
-        <footer style={{ background: "#0f172a", padding: "56px 24px 32px", color: "#475569" }}>
-          <div style={{ maxWidth: 1160, margin: "0 auto" }}>
-            <div className="ftl-footer-grid" style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr", gap: 48, marginBottom: 48 }}>
-              <div>
-                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
-                  <img 
-                    src="/ftl-cargo-logo.png" 
-                    alt="FTL Cargo" 
-                    style={{ height: 42, width: "auto" }} 
-                  />
-                </div>
-                <p style={{ fontFamily: "var(--font-body)", fontSize: 14, color: "#475569", lineHeight: 1.7, maxWidth: 260 }}>
-                  Direct pallet freight marketplace. Connecting verified truck drivers with shippers across Europe.
-                </p>
-              </div>
-              {/* Add remaining footer columns here as in your original code */}
-            </div>
-            <div style={{ borderTop: "1px solid #1e293b", paddingTop: 24, textAlign: "center" }}>
-              © 2026 FTLcargo. Built for drivers first.
-            </div>
-          </div>
-        </footer>
+        </nav>
       </div>
-    </>
+
+      <main>
+        {/* HERO */}
+        <section className="hero" id="shippers">
+          <div className="hero-copy">
+            <div className="eyebrow">
+              <span className="eyebrow-dot" />
+              214 routes with open capacity
+            </div>
+
+            <h1>
+              Freight that
+              <br />
+              <span>goes direct.</span>
+              <span className="muted">No warehouse. No detour.</span>
+            </h1>
+
+            <div className="proof">
+              <div className="avatars">
+                <div className="avatar">MK</div>
+                <div className="avatar">SB</div>
+                <div className="avatar">TV</div>
+              </div>
+              <div>
+                <strong>850+ verified carriers</strong>
+                <span>Already moving across Europe</span>
+              </div>
+            </div>
+
+            <p className="hero-lead">
+              FTLcargo matches your shipment with a verified truck already heading your way.
+              Point-to-point freight that fills empty legs instead of adding another warehouse stop.
+            </p>
+
+            <div className="hero-actions">
+              <button className="button button-dark" onClick={() => router.push("/register")}>
+                Get a freight quote <span>→</span>
+              </button>
+              <a className="button button-light" href="#how">
+                <span className="play">
+                  <svg width="8" height="8" viewBox="0 0 24 24" fill="#fff">
+                    <path d="M8 5v14l11-7z" />
+                  </svg>
+                </span>
+                How it works
+              </a>
+            </div>
+
+            <div className="hero-benefits">
+              <div className="benefit">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="1" y="7" width="13" height="9" rx="1" />
+                  <path d="M14 10h4l3 3v3h-7z" />
+                  <circle cx="6" cy="18" r="1.6" />
+                  <circle cx="17" cy="18" r="1.6" />
+                </svg>
+                <span>Point-to-point road freight</span>
+              </div>
+              <div className="benefit">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+                  <path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-4z" />
+                  <path d="M9 12l2 2 4-4" />
+                </svg>
+                <span>Verified carriers & cargo</span>
+              </div>
+              <div className="benefit">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+                  <path d="M6 2h8l5 5v15H6z" />
+                  <path d="M14 2v5h5" />
+                  <path d="M9 13h6M9 17h6" />
+                </svg>
+                <span>Digital documents</span>
+              </div>
+              <div className="benefit">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+                  <path d="M12 21s7-7.5 7-12a7 7 0 0 0-14 0c0 4.5 7 12 7 12z" />
+                  <circle cx="12" cy="9" r="2.3" />
+                </svg>
+                <span>Direct to destination</span>
+              </div>
+            </div>
+
+            <div className="hero-nav">
+              <div className="hero-counter">
+                <strong>01</strong> / 04
+              </div>
+              <div className="hero-arrows">
+                <button className="round-button" aria-label="Previous">
+                  ←
+                </button>
+                <button className="round-button" aria-label="Next">
+                  →
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="hero-visual">
+            {/* Put your real hero image in /public/hero-freight.jpg */}
+            <img
+              src="/hero-freight.jpg"
+              alt="FTLcargo direct freight across Europe"
+              onLoad={(e) => e.currentTarget.parentElement?.classList.add("hero-image-loaded")}
+              onError={(e) => ((e.target as HTMLImageElement).style.display = "none")}
+            />
+
+            <div className="image-placeholder">
+              <div>
+                <strong>Hero image goes here</strong>
+                Upload your custom freight image as <code>hero-freight.jpg</code> in the public folder.
+              </div>
+            </div>
+
+            <div className="visual-tag">
+              <div className="tag-icon">✓</div>
+              <div>
+                <strong>850+ verified carriers</strong>
+                <span>Already moving across Europe</span>
+              </div>
+            </div>
+
+            <div className="process">
+              <div className="process-item">
+                <span className="process-num">01</span>
+                <span className="process-label">Post shipment</span>
+                <span className="process-arrow">→</span>
+              </div>
+              <div className="process-item">
+                <span className="process-num">02</span>
+                <span className="process-label">Match carrier</span>
+                <span className="process-arrow">→</span>
+              </div>
+              <div className="process-item">
+                <span className="process-num">03</span>
+                <span className="process-label">Direct pickup</span>
+                <span className="process-arrow">→</span>
+              </div>
+              <div className="process-item">
+                <span className="process-num">04</span>
+                <span className="process-label">Delivered</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* COMPARISON */}
+        <section className="section" id="how">
+          <div className="container">
+            <div className="section-header">
+              <div className="section-kicker">THE FTLcargo MODEL</div>
+              <h2>Don't move freight through a network when one truck can move it direct.</h2>
+              <p>
+                We connect shippers to existing truck capacity. That means fewer handoffs, less
+                handling and better use of trucks already on the road.
+              </p>
+            </div>
+
+            <div className="comparison">
+              <div className="compare-col">
+                <div className="compare-title">Traditional freight</div>
+                <div className="compare-row">
+                  <strong>Shipment</strong>
+                  <span>→ warehouse → transfer → warehouse → delivery</span>
+                </div>
+                <div className="compare-row">
+                  <strong>Capacity</strong>
+                  <span>Booked independently from the route</span>
+                </div>
+                <div className="compare-row">
+                  <strong>Handoffs</strong>
+                  <span>Multiple touch points add time and risk</span>
+                </div>
+                <div className="compare-row">
+                  <strong>Cost</strong>
+                  <span>More infrastructure and intermediaries</span>
+                </div>
+              </div>
+
+              <div className="compare-col">
+                <div className="compare-title">With FTLcargo</div>
+                <div className="compare-row">
+                  <strong>Shipment</strong>
+                  <span>→ truck → destination</span>
+                </div>
+                <div className="compare-row">
+                  <strong>Capacity</strong>
+                  <span>Matched to a truck already going your way</span>
+                </div>
+                <div className="compare-row">
+                  <strong>Handoffs</strong>
+                  <span>One carrier. One journey. Direct delivery.</span>
+                </div>
+                <div className="compare-row">
+                  <strong>Cost</strong>
+                  <span>Turn existing empty capacity into useful capacity</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* HOW IT WORKS */}
+        <section className="section section-tight">
+          <div className="container">
+            <div className="section-header">
+              <div className="section-kicker">HOW IT WORKS</div>
+              <h2>One shipment. One truck. One direct journey.</h2>
+            </div>
+
+            <div className="how-grid">
+              <div className="how-step">
+                <div className="how-num">01</div>
+                <h3>Post your shipment</h3>
+                <p>Origin, destination, weight and pickup date. Keep it simple.</p>
+              </div>
+              <div className="how-step">
+                <div className="how-num">02</div>
+                <h3>Find existing capacity</h3>
+                <p>We look for verified carriers already travelling in your direction.</p>
+              </div>
+              <div className="how-step">
+                <div className="how-num">03</div>
+                <h3>Confirm the carrier</h3>
+                <p>Review the carrier, route and shipment details before booking.</p>
+              </div>
+              <div className="how-step">
+                <div className="how-num">04</div>
+                <h3>Deliver direct</h3>
+                <p>Your freight stays on the truck instead of taking an unnecessary detour.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* FOR CARRIERS */}
+        <section className="section section-tight" id="carriers">
+          <div className="container">
+            <div className="carrier">
+              <div>
+                <div className="section-kicker">FOR CARRIERS</div>
+                <h2>Turn empty miles into revenue.</h2>
+                <p>
+                  You're already going there. Take compatible freight with you. Choose shipments
+                  that fit your route, capacity and schedule — and make the return leg work harder.
+                </p>
+                <button className="button button-dark" onClick={() => router.push("/register")}>
+                  Join as a carrier <span>→</span>
+                </button>
+
+                <div className="stats">
+                  <div className="stat">
+                    <strong>850+</strong>
+                    <span>Verified carriers</span>
+                  </div>
+                  <div className="stat">
+                    <strong>214</strong>
+                    <span>Open routes this week</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="capacity">
+                <div className="capacity-head">
+                  <span>BER → AMS · 610 KM</span>
+                  <span>5T CAPACITY</span>
+                </div>
+
+                <div className="capacity-row">
+                  <div className="capacity-label">
+                    <strong>Typical return leg</strong>
+                    <span>22% loaded</span>
+                  </div>
+                  <div className="bar">
+                    <div className="fill fill-old" />
+                  </div>
+                </div>
+
+                <div className="capacity-row">
+                  <div className="capacity-label">
+                    <strong>Matched with FTLcargo</strong>
+                    <span style={{ color: "var(--blue)" }}>91% loaded</span>
+                  </div>
+                  <div className="bar">
+                    <div className="fill fill-match" />
+                  </div>
+                </div>
+
+                <div className="capacity-note">Illustrative example based on a Berlin–Amsterdam route.</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* TRUST */}
+        <section className="section section-tight" id="trust">
+          <div className="container">
+            <div className="section-header">
+              <div className="section-kicker">TRUST & SAFETY</div>
+              <h2>Direct doesn't mean unchecked.</h2>
+              <p>Business-critical freight still needs accountability at every step.</p>
+            </div>
+
+            <div className="trust-grid">
+              <div className="trust-card">
+                <div className="trust-icon">✓</div>
+                <h3>Verified carriers</h3>
+                <p>Carriers are verified before they can take shipments through the platform.</p>
+              </div>
+              <div className="trust-card">
+                <div className="trust-icon">⌁</div>
+                <h3>Live shipment visibility</h3>
+                <p>Know where your freight is from pickup through delivery.</p>
+              </div>
+              <div className="trust-card">
+                <div className="trust-icon">▣</div>
+                <h3>Digital proof of delivery</h3>
+                <p>Every delivery has a digital record, so the handoff is documented.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* CTA */}
+        <section className="cta" id="quote">
+          <div className="container">
+            <div className="cta-inner">
+              <h2>
+                Your freight has somewhere to go.
+                <br />
+                <span>So does an empty truck.</span>
+              </h2>
+              <p>
+                Put them together. FTLcargo connects shipments with verified trucks already moving
+                across the Baltics and Europe.
+              </p>
+              <div className="cta-actions">
+                <button className="button button-dark" onClick={() => router.push("/register")}>
+                  Get a freight quote <span>→</span>
+                </button>
+                <button className="button button-light" onClick={() => router.push("/register")}>
+                  Join as a carrier
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      {/* FOOTER */}
+      <footer id="contact">
+        <div className="container">
+          <div className="footer-top">
+            <div className="footer-brand">
+              <div className="brand">
+                <div className="brand-mark">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.6">
+                    <path d="M3 7l9-4 9 4-9 4-9-4z" />
+                    <path d="M3 7v10l9 4 9-4V7" />
+                    <path d="M12 11v10" />
+                  </svg>
+                </div>
+                <div className="brand-copy">
+                  <strong>FTLcargo</strong>
+                </div>
+              </div>
+              <p>
+                Point-to-point freight across Europe. Matching shippers with verified carriers and
+                putting empty truck capacity to work.
+              </p>
+            </div>
+
+            <div className="footer-cols">
+              <div className="footer-col">
+                <h4>Platform</h4>
+                <a href="#shippers">For shippers</a>
+                <a href="#carriers">For carriers</a>
+                <a href="#how">How it works</a>
+                <a href="#trust">Trust & safety</a>
+              </div>
+              <div className="footer-col">
+                <h4>Company</h4>
+                <a href="#">About</a>
+                <a href="#">Contact</a>
+                <a href="#">Terms</a>
+                <a href="#">Privacy</a>
+              </div>
+            </div>
+          </div>
+
+          <div className="footer-bottom">
+            <span>© 2026 FTLcargo</span>
+            <span>Built for direct freight</span>
+          </div>
+        </div>
+      </footer>
+    </div>
   );
 }
