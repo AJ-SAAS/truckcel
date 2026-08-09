@@ -51,7 +51,7 @@ export default function Header() {
         }}
       >
         <img
-          src="/ftl-cargo-logo.png"
+          src="/ftl-cargo-logo.jpg"
           alt="FTLcargo"
           style={{ height: 40, width: "auto" }}
         />

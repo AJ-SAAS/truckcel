@@ -14,7 +14,7 @@ export default function Home() {
           {/* Real logo */}
           <div className="brand" onClick={() => router.push("/")} style={{ cursor: "pointer" }}>
             <img
-              src="/ftl-cargo-logo.png"
+              src="/ftl-cargo-logo.jpg"
               alt="FTLcargo"
               style={{ height: 42, width: "auto" }}
             />
@@ -397,7 +397,7 @@ export default function Home() {
             <div className="footer-brand">
               <div className="brand">
                 <img
-                  src="/ftl-cargo-logo.png"
+                  src="/ftl-cargo-logo.jpg"
                   alt="FTLcargo"
                   style={{ height: 36, width: "auto", filter: "brightness(0) invert(1)" }}
                 />
