@@ -11,7 +11,6 @@ export default function Home() {
       {/* NAV */}
       <div className="container">
         <nav className="nav">
-          {/* Real logo */}
           <div className="brand" onClick={() => router.push("/")} style={{ cursor: "pointer" }}>
             <img
               src="/ftl-cargo-logo.jpg"
@@ -144,8 +143,20 @@ export default function Home() {
             <img
               src="/hero-freight.jpg"
               alt="FTLcargo direct freight across Europe"
-              onLoad={(e) => e.currentTarget.parentElement?.classList.add("hero-image-loaded")}
-              onError={(e) => ((e.target as HTMLImageElement).style.display = "none")}
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+                objectPosition: "center",
+              }}
+              loading="eager"
+              fetchPriority="high"
+              onLoad={(e) => {
+                e.currentTarget.parentElement?.classList.add("hero-image-loaded");
+              }}
+              onError={(e) => {
+                (e.target as HTMLImageElement).style.display = "none";
+              }}
             />
 
             <div className="image-placeholder">
