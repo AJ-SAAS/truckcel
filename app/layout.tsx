@@ -1,3 +1,4 @@
+// app/layout.tsx
 import type { Metadata } from "next";
 import "./globals.css";
 import ClientHeader from "@/components/ClientHeader";
@@ -23,7 +24,10 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body suppressHydrationWarning={true}>
+      <body
+        suppressHydrationWarning={true}
+        style={{ background: "#e5e8ec" }}   // ← this reduces the flash
+      >
         <ClientHeader />
         <main>{children}</main>
       </body>
