@@ -151,20 +151,7 @@ export default function Home() {
               }}
               loading="eager"
               fetchPriority="high"
-              onLoad={(e) => {
-                e.currentTarget.parentElement?.classList.add("hero-image-loaded");
-              }}
-              onError={(e) => {
-                (e.target as HTMLImageElement).style.display = "none";
-              }}
             />
-
-            <div className="image-placeholder">
-              <div>
-                <strong>Hero image goes here</strong>
-                Upload your custom freight image as <code>hero-freight.jpg</code> in the public folder.
-              </div>
-            </div>
 
             <div className="visual-tag">
               <div className="tag-icon">✓</div>
