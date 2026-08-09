@@ -66,27 +66,6 @@ export default function Home() {
           flex-shrink: 0;
           cursor: pointer;
         }
-        .brand-mark {
-          width: 42px;
-          height: 42px;
-          border: 1.5px solid var(--ink);
-          border-radius: 12px;
-          display: grid;
-          place-items: center;
-        }
-        .brand-copy strong {
-          display: block;
-          font-size: 15px;
-          line-height: 1.15;
-          letter-spacing: -0.02em;
-        }
-        .brand-copy span {
-          display: block;
-          margin-top: 3px;
-          color: var(--muted);
-          font-size: 10px;
-          line-height: 1.2;
-        }
         .nav-links {
           display: flex;
           align-items: center;
@@ -666,8 +645,6 @@ export default function Home() {
           border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
         .footer-brand { max-width: 300px; }
-        .footer-brand .brand-copy strong { color: #fff; }
-        .footer-brand .brand-mark { border-color: #fff; }
         .footer-brand p {
           font-size: 11px;
           line-height: 1.65;
@@ -760,22 +737,13 @@ export default function Home() {
       {/* NAV */}
       <div className="container">
         <nav className="nav">
-          <div className="brand" onClick={() => router.push("/")}>
-            <div className="brand-mark">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
-                <path d="M3 7l9-4 9 4-9 4-9-4z" />
-                <path d="M3 7v10l9 4 9-4V7" />
-                <path d="M12 11v10" />
-              </svg>
-            </div>
-            <div className="brand-copy">
-              <strong>FTLcargo</strong>
-              <span>
-                Direct freight
-                <br />
-                across Europe
-              </span>
-            </div>
+          {/* Real logo */}
+          <div className="brand" onClick={() => router.push("/")} style={{ cursor: "pointer" }}>
+            <img
+              src="/ftl-cargo-logo.png"
+              alt="FTLcargo"
+              style={{ height: 42, width: "auto" }}
+            />
           </div>
 
           <div className="nav-links">
@@ -899,7 +867,6 @@ export default function Home() {
           </div>
 
           <div className="hero-visual">
-            {/* Put your real hero image in /public/hero-freight.jpg */}
             <img
               src="/hero-freight.jpg"
               alt="FTLcargo direct freight across Europe"
@@ -1154,17 +1121,13 @@ export default function Home() {
         <div className="container">
           <div className="footer-top">
             <div className="footer-brand">
+              {/* Real logo (white version for dark footer) */}
               <div className="brand">
-                <div className="brand-mark">
-                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.6">
-                    <path d="M3 7l9-4 9 4-9 4-9-4z" />
-                    <path d="M3 7v10l9 4 9-4V7" />
-                    <path d="M12 11v10" />
-                  </svg>
-                </div>
-                <div className="brand-copy">
-                  <strong>FTLcargo</strong>
-                </div>
+                <img
+                  src="/ftl-cargo-logo.png"
+                  alt="FTLcargo"
+                  style={{ height: 36, width: "auto", filter: "brightness(0) invert(1)" }}
+                />
               </div>
               <p>
                 Point-to-point freight across Europe. Matching shippers with verified carriers and
