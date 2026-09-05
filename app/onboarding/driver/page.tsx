@@ -113,7 +113,7 @@ function StepDocuments({ data, onUpdate }: any) {
   return (
     <div style={{ maxWidth: 500, margin: "0 auto" }}>
       <h2 style={{ fontSize: 24, fontWeight: 700, marginBottom: 32 }}>Required Documents</h2>
-      
+
       <div style={{ marginBottom: 24 }}>
         <Label required>Driver's License (Front)</Label>
         <input type="file" accept="image/*" onChange={(e) => onUpdate({ ...data, licenseFront: e.target.files?.[0] || null })} style={{ width: "100%", padding: 12, border: "2px dashed #d1d5db", borderRadius: 8 }} />
@@ -124,9 +124,42 @@ function StepDocuments({ data, onUpdate }: any) {
         <input type="file" accept="image/*" onChange={(e) => onUpdate({ ...data, licenseBack: e.target.files?.[0] || null })} style={{ width: "100%", padding: 12, border: "2px dashed #d1d5db", borderRadius: 8 }} />
       </div>
 
-      <div style={{ marginBottom: 24 }}>
+      <div style={{ marginBottom: 8, paddingTop: 8, borderTop: "1px solid #e5e7eb" }}>
+        <p style={{ fontSize: 13, color: "#6b7280", margin: "16px 0 0" }}>
+          CMR insurance — shippers will see this on your load listings, so it's worth filling in.
+        </p>
+      </div>
+
+      <div style={{ marginBottom: 24, marginTop: 16 }}>
         <Label required>Insurance Certificate</Label>
         <input type="file" accept="image/*,.pdf" onChange={(e) => onUpdate({ ...data, insurance: e.target.files?.[0] || null })} style={{ width: "100%", padding: 12, border: "2px dashed #d1d5db", borderRadius: 8 }} />
+      </div>
+
+      <div style={{ marginBottom: 24 }}>
+        <Label>Insurance Provider</Label>
+        <Input placeholder="e.g. Balcia Insurance" value={data.insuranceProvider || ""} onChange={(e: any) => onUpdate({ ...data, insuranceProvider: e.target.value })} />
+      </div>
+
+      <div style={{ marginBottom: 24 }}>
+        <Label>CMR Policy Number</Label>
+        <Input placeholder="Enter your CMR policy number" value={data.insurancePolicyNumber || ""} onChange={(e: any) => onUpdate({ ...data, insurancePolicyNumber: e.target.value })} />
+      </div>
+
+      <div style={{ marginBottom: 8 }}>
+        <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}>
+          <input
+            type="checkbox"
+            checked={!!data.cargoInsured}
+            onChange={(e) => onUpdate({ ...data, cargoInsured: e.target.checked })}
+            style={{ width: 18, height: 18 }}
+          />
+          <span style={{ fontSize: 14, color: "#374151" }}>
+            I confirm I currently hold valid CMR insurance
+          </span>
+        </label>
+        <p style={{ fontSize: 12, color: "#9ca3af", marginTop: 6, marginLeft: 28 }}>
+          Self-declared for now. Shippers will see a "CMR insured" badge based on this.
+        </p>
       </div>
     </div>
   );
@@ -201,6 +234,9 @@ export default function DriverOnboarding() {
         capacityKg: Number(formData.capacity) || 0,
         primaryFrom: formData.primaryFrom,
         primaryTo: formData.primaryTo,
+        insuranceProvider: formData.insuranceProvider || "",
+        insurancePolicyNumber: formData.insurancePolicyNumber || "",
+        cargoInsured: !!formData.cargoInsured,
         status: "pending_review",
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),

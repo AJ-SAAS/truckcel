@@ -4,7 +4,8 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { doc, getDoc, updateDoc, serverTimestamp, increment } from "firebase/firestore";
-import { auth, db } from "@/lib/firebase";
+import { auth, db, storage } from "@/lib/firebase";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { onAuthStateChanged } from "firebase/auth";
 import {
   MapPin,
@@ -15,6 +16,10 @@ import {
   ImageIcon,
   Check,
   ArrowRight,
+  Camera,
+  X,
+  ShieldCheck,
+  ShieldQuestion,
 } from "lucide-react";
 
 interface Shipment {
@@ -41,6 +46,17 @@ interface Shipment {
   matchedAt?: any;
   startedAt?: any;
   completedAt?: any;
+  podImageUrl?: string;
+  podUploadedAt?: any;
+  podReceivedBy?: string;
+}
+
+interface DriverInfo {
+  fullName?: string;
+  companyName?: string;
+  truckType?: string;
+  cargoInsured?: boolean;
+  insuranceProvider?: string;
 }
 
 const CARGO_LABELS: Record<string, string> = {
@@ -71,6 +87,12 @@ const theme = {
   textMuted: "#9ca3af",
   accent: "#2563eb",
   accentText: "#1d4ed8",
+  success: "#16a34a",
+  successBg: "#f0fdf4",
+  successText: "#15803d",
+  danger: "#dc2626",
+  warningBg: "#fffbeb",
+  warningText: "#b45309",
 };
 
 function formatTimestamp(ts: any): string {
@@ -212,11 +234,103 @@ function ShipmentTimeline({ load }: { load: Shipment }) {
   );
 }
 
+function ProofOfDeliverySection({ load }: { load: Shipment }) {
+  if (!load.podImageUrl) return null;
+  return (
+    <Section>
+      <SectionHeading icon={<Camera size={18} color={theme.success} />}>
+        Proof of delivery
+      </SectionHeading>
+      <div
+        style={{
+          borderRadius: 12,
+          overflow: "hidden",
+          background: "#f1f5f9",
+          marginBottom: 12,
+        }}
+      >
+        <img
+          src={load.podImageUrl}
+          alt="Proof of delivery"
+          style={{ width: "100%", maxHeight: 400, objectFit: "contain" }}
+        />
+      </div>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 20, fontSize: 13, color: theme.textMuted }}>
+        {load.podUploadedAt && <span>Uploaded {formatTimestamp(load.podUploadedAt)}</span>}
+        {load.podReceivedBy && <span>Received by: {load.podReceivedBy}</span>}
+      </div>
+    </Section>
+  );
+}
+
+function CarrierSection({ driver }: { driver: DriverInfo }) {
+  const isInsured = !!driver.cargoInsured;
+  return (
+    <Section>
+      <SectionHeading icon={<Truck size={18} color={theme.textMuted} />}>
+        Carrier
+      </SectionHeading>
+
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
+        <div>
+          <p style={{ fontSize: 14, fontWeight: 500, color: theme.textPrimary, margin: 0 }}>
+            {driver.fullName || "Driver"}
+          </p>
+          {driver.companyName && (
+            <p style={{ fontSize: 13, color: theme.textSecondary, marginTop: 2 }}>{driver.companyName}</p>
+          )}
+        </div>
+
+        {isInsured ? (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              background: theme.successBg,
+              color: theme.successText,
+              padding: "6px 12px",
+              borderRadius: 20,
+              fontSize: 12,
+              fontWeight: 600,
+            }}
+          >
+            <ShieldCheck size={14} />
+            Cargo insured
+            {driver.insuranceProvider ? ` · ${driver.insuranceProvider}` : ""}
+          </div>
+        ) : (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              background: theme.warningBg,
+              color: theme.warningText,
+              padding: "6px 12px",
+              borderRadius: 20,
+              fontSize: 12,
+              fontWeight: 600,
+            }}
+          >
+            <ShieldQuestion size={14} />
+            Insurance not confirmed
+          </div>
+        )}
+      </div>
+      <p style={{ fontSize: 11, color: theme.textMuted, marginTop: 10 }}>
+        Insurance status is self-declared by the carrier.
+      </p>
+    </Section>
+  );
+}
+
 export default function LoadDetailPage() {
   const { id } = useParams();
   const router = useRouter();
 
   const [load, setLoad] = useState<Shipment | null>(null);
+  const [driver, setDriver] = useState<DriverInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [accepting, setAccepting] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
@@ -224,6 +338,12 @@ export default function LoadDetailPage() {
   const [isCarrier, setIsCarrier] = useState(false);
   const [activeImage, setActiveImage] = useState<string | null>(null);
   const [notFound, setNotFound] = useState(false);
+
+  // Proof of delivery panel state
+  const [showPodPanel, setShowPodPanel] = useState(false);
+  const [podFile, setPodFile] = useState<File | null>(null);
+  const [podReceivedBy, setPodReceivedBy] = useState("");
+  const [podError, setPodError] = useState("");
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (user) => {
@@ -255,6 +375,14 @@ export default function LoadDetailPage() {
           setLoad(data);
           if (data.imageUrls && data.imageUrls.length > 0) {
             setActiveImage(data.imageUrls[0]);
+          }
+
+          // Fetch the assigned carrier's info once a driver is matched
+          if (data.carrierId) {
+            const driverSnap = await getDoc(doc(db, "drivers", data.carrierId));
+            if (driverSnap.exists()) {
+              setDriver(driverSnap.data() as DriverInfo);
+            }
           }
         } else {
           setNotFound(true);
@@ -317,17 +445,35 @@ export default function LoadDetailPage() {
     }
   };
 
-  const handleMarkDelivered = async () => {
+  const handlePodFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setPodFile(e.target.files[0]);
+      setPodError("");
+    }
+  };
+
+  const handleConfirmDelivery = async () => {
     if (!load || !uid) return;
-    const confirmed = window.confirm("Mark this load as delivered? This can't be undone.");
-    if (!confirmed) return;
+
+    if (!podFile) {
+      setPodError("A proof of delivery photo is required before marking this load as delivered.");
+      return;
+    }
 
     setUpdatingStatus(true);
     try {
+      const fileName = `${Date.now()}-${podFile.name.replace(/\s+/g, "-")}`;
+      const storageRef = ref(storage, `pod/${load.id}/${fileName}`);
+      await uploadBytes(storageRef, podFile);
+      const podImageUrl = await getDownloadURL(storageRef);
+
       await updateDoc(doc(db, "shipments", load.id), {
         status: "delivered",
         completedAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
+        podImageUrl,
+        podUploadedAt: serverTimestamp(),
+        podReceivedBy: podReceivedBy.trim() || null,
       });
 
       await updateDoc(doc(db, "drivers", uid), {
@@ -335,8 +481,12 @@ export default function LoadDetailPage() {
       });
 
       await refreshLoad();
+      setShowPodPanel(false);
+      setPodFile(null);
+      setPodReceivedBy("");
     } catch (err) {
       console.error(err);
+      setPodError("Failed to mark as delivered. Please try again.");
     } finally {
       setUpdatingStatus(false);
     }
@@ -432,6 +582,12 @@ export default function LoadDetailPage() {
         </Section>
 
         {load.status !== "open" && <ShipmentTimeline load={load} />}
+
+        {/* Carrier + insurance badge — shown once a driver is assigned */}
+        {load.status !== "open" && driver && <CarrierSection driver={driver} />}
+
+        {/* Proof of delivery — shown once delivered */}
+        <ProofOfDeliverySection load={load} />
 
         {/* Cargo photos */}
         <Section>
@@ -612,38 +768,174 @@ export default function LoadDetailPage() {
           </div>
         )}
 
-        {isAssignedDriver && load.status === "in_transit" && (
+        {/* Mark delivered trigger — assigned driver, in transit, panel not yet open */}
+        {isAssignedDriver && load.status === "in_transit" && !showPodPanel && (
           <div style={{ display: "flex", justifyContent: "center", marginTop: 24 }}>
             <button
-              onClick={handleMarkDelivered}
-              disabled={updatingStatus}
+              onClick={() => setShowPodPanel(true)}
               style={{
                 padding: "13px 32px",
-                background: updatingStatus ? "#93c5fd" : theme.accent,
+                background: theme.success,
                 color: "white",
                 border: "none",
                 borderRadius: 12,
                 fontWeight: 600,
                 fontSize: 15,
-                cursor: updatingStatus ? "not-allowed" : "pointer",
+                cursor: "pointer",
                 display: "flex",
                 alignItems: "center",
                 gap: 8,
               }}
             >
               <Check size={16} />
-              {updatingStatus ? "Updating..." : "Mark delivered"}
+              Mark delivered
             </button>
           </div>
         )}
 
-        {load.status === "delivered" && (
+        {/* Proof of delivery upload panel */}
+        {isAssignedDriver && load.status === "in_transit" && showPodPanel && (
+          <Section>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <Camera size={18} color={theme.success} />
+                <h2 style={{ fontSize: 16, fontWeight: 600, color: theme.textPrimary, margin: 0 }}>
+                  Confirm delivery
+                </h2>
+              </div>
+              <button
+                onClick={() => {
+                  setShowPodPanel(false);
+                  setPodFile(null);
+                  setPodError("");
+                }}
+                style={{ background: "none", border: "none", cursor: "pointer", color: theme.textMuted }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <p style={{ fontSize: 13, color: theme.textSecondary, marginBottom: 18, lineHeight: 1.6 }}>
+              A photo is required to confirm this load was delivered. This protects both you and the shipper.
+            </p>
+
+            <div style={{ marginBottom: 18 }}>
+              <p style={{ fontSize: 12, color: theme.textMuted, marginBottom: 8 }}>
+                Delivery photo <span style={{ color: theme.danger }}>*</span>
+              </p>
+              {podFile ? (
+                <div style={{ position: "relative", display: "inline-block" }}>
+                  <img
+                    src={URL.createObjectURL(podFile)}
+                    alt="POD preview"
+                    style={{ width: 160, height: 160, objectFit: "cover", borderRadius: 12 }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setPodFile(null)}
+                    style={{
+                      position: "absolute",
+                      top: -8,
+                      right: -8,
+                      background: theme.danger,
+                      color: "white",
+                      borderRadius: "50%",
+                      border: "none",
+                      width: 22,
+                      height: 22,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    onChange={handlePodFileChange}
+                    style={{ display: "none" }}
+                    id="pod-photo"
+                  />
+                  <label
+                    htmlFor="pod-photo"
+                    style={{
+                      border: `2px dashed ${theme.border}`,
+                      borderRadius: 12,
+                      padding: 28,
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <Camera size={32} color={theme.textMuted} style={{ marginBottom: 10 }} />
+                    <p style={{ fontSize: 13, fontWeight: 500, color: theme.textPrimary, margin: 0 }}>
+                      Take or upload a photo
+                    </p>
+                    <p style={{ fontSize: 12, color: theme.textMuted, marginTop: 4 }}>
+                      Show the delivered cargo at its destination
+                    </p>
+                  </label>
+                </>
+              )}
+            </div>
+
+            <div style={{ marginBottom: 18 }}>
+              <p style={{ fontSize: 12, color: theme.textMuted, marginBottom: 8 }}>Received by (optional)</p>
+              <input
+                type="text"
+                value={podReceivedBy}
+                onChange={(e) => setPodReceivedBy(e.target.value)}
+                placeholder="Name of the person who received the cargo"
+                style={{
+                  width: "100%",
+                  border: `1px solid ${theme.border}`,
+                  borderRadius: 12,
+                  padding: "12px 14px",
+                  fontSize: 14,
+                  fontFamily: theme.font,
+                }}
+              />
+            </div>
+
+            {podError && (
+              <p style={{ fontSize: 13, color: theme.danger, marginBottom: 14 }}>{podError}</p>
+            )}
+
+            <button
+              onClick={handleConfirmDelivery}
+              disabled={updatingStatus}
+              style={{
+                width: "100%",
+                padding: "13px 24px",
+                background: updatingStatus ? "#93c5fd" : theme.success,
+                color: "white",
+                border: "none",
+                borderRadius: 12,
+                fontWeight: 600,
+                fontSize: 15,
+                cursor: updatingStatus ? "not-allowed" : "pointer",
+              }}
+            >
+              {updatingStatus ? "Confirming..." : "Confirm delivery"}
+            </button>
+          </Section>
+        )}
+
+        {load.status === "delivered" && !load.podImageUrl && (
           <div style={{ display: "flex", justifyContent: "center", marginTop: 24 }}>
             <div
               style={{
                 padding: "12px 24px",
-                background: "#f0fdf4",
-                color: "#15803d",
+                background: theme.successBg,
+                color: theme.successText,
                 borderRadius: 12,
                 fontWeight: 600,
                 fontSize: 14,
