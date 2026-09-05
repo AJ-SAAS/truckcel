@@ -24,6 +24,41 @@ const TRUCK_TYPES = [
   { value: "refrigerated", label: "Refrigerated", icon: "❄️", desc: "Temp-controlled" },
 ];
 
+// Validates the current step's data and returns a map of field -> error message.
+// An empty object means the step is valid and it's OK to advance.
+function validateStep(stepIndex: number, data: any): Record<string, string> {
+  const errors: Record<string, string> = {};
+
+  if (stepIndex === 0) {
+    if (!data.fullName?.trim()) errors.fullName = "Full name is required";
+    if (!data.phone?.trim()) errors.phone = "Phone number is required";
+    if (!data.licenseNumber?.trim()) errors.licenseNumber = "License number is required";
+  }
+
+  if (stepIndex === 1) {
+    if (!data.companyName?.trim()) errors.companyName = "Company name is required";
+  }
+
+  if (stepIndex === 2) {
+    if (!data.truckType) errors.truckType = "Please select a truck type";
+    if (!data.licensePlate?.trim()) errors.licensePlate = "License plate is required";
+    if (!data.capacity || Number(data.capacity) <= 0) errors.capacity = "Max capacity is required";
+  }
+
+  if (stepIndex === 3) {
+    if (!data.licenseFront) errors.licenseFront = "Front of license is required";
+    if (!data.licenseBack) errors.licenseBack = "Back of license is required";
+    if (!data.insurance) errors.insurance = "Insurance certificate is required";
+  }
+
+  if (stepIndex === 4) {
+    if (!data.primaryFrom?.trim()) errors.primaryFrom = "Pickup city is required";
+    if (!data.primaryTo?.trim()) errors.primaryTo = "Delivery city is required";
+  }
+
+  return errors;
+}
+
 // Helper Components
 function Label({ children, required = false }: { children: React.ReactNode; required?: boolean }) {
   return (
@@ -33,7 +68,12 @@ function Label({ children, required = false }: { children: React.ReactNode; requ
   );
 }
 
-function Input({ type = "text", placeholder, value, onChange, required = false }: any) {
+function ErrorText({ message }: { message?: string }) {
+  if (!message) return null;
+  return <p style={{ fontSize: 12, color: "#ef4444", marginTop: 6 }}>{message}</p>;
+}
+
+function Input({ type = "text", placeholder, value, onChange, required = false, hasError = false }: any) {
   return (
     <input
       type={type}
@@ -44,43 +84,47 @@ function Input({ type = "text", placeholder, value, onChange, required = false }
       style={{
         width: "100%",
         padding: "12px 16px",
-        border: "1px solid #d1d5db",
+        border: hasError ? "1.5px solid #ef4444" : "1px solid #d1d5db",
         borderRadius: 8,
         fontSize: 16,
-        background: "white",
+        background: hasError ? "#fef2f2" : "white",
       }}
     />
   );
 }
 
 // Step Components
-function StepAccount({ data, onUpdate }: any) {
+function StepAccount({ data, onUpdate, errors }: any) {
   return (
     <div style={{ maxWidth: 500, margin: "0 auto" }}>
       <h2 style={{ fontSize: 24, fontWeight: 700, marginBottom: 32 }}>Account Setup</h2>
       <div style={{ marginBottom: 24 }}>
         <Label required>Full Name</Label>
-        <Input placeholder="Enter your full name" value={data.fullName || ""} onChange={(e: any) => onUpdate({ ...data, fullName: e.target.value })} required />
+        <Input placeholder="Enter your full name" value={data.fullName || ""} onChange={(e: any) => onUpdate({ ...data, fullName: e.target.value })} required hasError={!!errors.fullName} />
+        <ErrorText message={errors.fullName} />
       </div>
       <div style={{ marginBottom: 24 }}>
         <Label required>Phone Number</Label>
-        <Input type="tel" placeholder="+371 123 4567" value={data.phone || ""} onChange={(e: any) => onUpdate({ ...data, phone: e.target.value })} required />
+        <Input type="tel" placeholder="+371 123 4567" value={data.phone || ""} onChange={(e: any) => onUpdate({ ...data, phone: e.target.value })} required hasError={!!errors.phone} />
+        <ErrorText message={errors.phone} />
       </div>
       <div style={{ marginBottom: 24 }}>
         <Label required>License Number</Label>
-        <Input placeholder="Enter your driver's license number" value={data.licenseNumber || ""} onChange={(e: any) => onUpdate({ ...data, licenseNumber: e.target.value })} required />
+        <Input placeholder="Enter your driver's license number" value={data.licenseNumber || ""} onChange={(e: any) => onUpdate({ ...data, licenseNumber: e.target.value })} required hasError={!!errors.licenseNumber} />
+        <ErrorText message={errors.licenseNumber} />
       </div>
     </div>
   );
 }
 
-function StepCompany({ data, onUpdate }: any) {
+function StepCompany({ data, onUpdate, errors }: any) {
   return (
     <div style={{ maxWidth: 500, margin: "0 auto" }}>
       <h2 style={{ fontSize: 24, fontWeight: 700, marginBottom: 32 }}>Company Details</h2>
       <div style={{ marginBottom: 24 }}>
         <Label required>Company Name</Label>
-        <Input placeholder="Enter your company name" value={data.companyName || ""} onChange={(e: any) => onUpdate({ ...data, companyName: e.target.value })} required />
+        <Input placeholder="Enter your company name" value={data.companyName || ""} onChange={(e: any) => onUpdate({ ...data, companyName: e.target.value })} required hasError={!!errors.companyName} />
+        <ErrorText message={errors.companyName} />
       </div>
       <div style={{ marginBottom: 24 }}>
         <Label>Tax ID / EIN</Label>
@@ -90,12 +134,12 @@ function StepCompany({ data, onUpdate }: any) {
   );
 }
 
-function StepTruck({ data, onUpdate }: any) {
+function StepTruck({ data, onUpdate, errors }: any) {
   return (
     <div style={{ maxWidth: 500, margin: "0 auto" }}>
       <h2 style={{ fontSize: 24, fontWeight: 700, marginBottom: 32 }}>Truck Information</h2>
 
-      <div style={{ marginBottom: 28 }}>
+      <div style={{ marginBottom: 8 }}>
         <Label required>Truck Type</Label>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 10 }}>
           {TRUCK_TYPES.map((truck) => {
@@ -113,7 +157,11 @@ function StepTruck({ data, onUpdate }: any) {
                   gap: 8,
                   padding: "20px 12px",
                   borderRadius: 12,
-                  border: isSelected ? "2px solid #3b82f6" : "2px solid #e5e7eb",
+                  border: isSelected
+                    ? "2px solid #3b82f6"
+                    : errors.truckType
+                    ? "2px solid #ef4444"
+                    : "2px solid #e5e7eb",
                   background: isSelected ? "#eff6ff" : "white",
                   cursor: "pointer",
                   transition: "all 0.15s ease",
@@ -147,33 +195,48 @@ function StepTruck({ data, onUpdate }: any) {
             );
           })}
         </div>
+        <ErrorText message={errors.truckType} />
       </div>
 
-      <div style={{ marginBottom: 24 }}>
+      <div style={{ marginBottom: 24, marginTop: 24 }}>
         <Label required>License Plate</Label>
-        <Input placeholder="License plate number" value={data.licensePlate || ""} onChange={(e: any) => onUpdate({ ...data, licensePlate: e.target.value })} required />
+        <Input placeholder="License plate number" value={data.licensePlate || ""} onChange={(e: any) => onUpdate({ ...data, licensePlate: e.target.value })} required hasError={!!errors.licensePlate} />
+        <ErrorText message={errors.licensePlate} />
       </div>
       <div style={{ marginBottom: 24 }}>
         <Label required>Max Capacity (kg)</Label>
-        <Input type="number" placeholder="24000" value={data.capacity || ""} onChange={(e: any) => onUpdate({ ...data, capacity: e.target.value })} required />
+        <Input type="number" placeholder="24000" value={data.capacity || ""} onChange={(e: any) => onUpdate({ ...data, capacity: e.target.value })} required hasError={!!errors.capacity} />
+        <ErrorText message={errors.capacity} />
       </div>
     </div>
   );
 }
 
-function StepDocuments({ data, onUpdate }: any) {
+function StepDocuments({ data, onUpdate, errors }: any) {
+  const fileInputStyle = (hasError: boolean) => ({
+    width: "100%",
+    padding: 12,
+    border: hasError ? "2px dashed #ef4444" : "2px dashed #d1d5db",
+    borderRadius: 8,
+    background: hasError ? "#fef2f2" : "white",
+  });
+
   return (
     <div style={{ maxWidth: 500, margin: "0 auto" }}>
       <h2 style={{ fontSize: 24, fontWeight: 700, marginBottom: 32 }}>Required Documents</h2>
 
       <div style={{ marginBottom: 24 }}>
         <Label required>Driver's License (Front)</Label>
-        <input type="file" accept="image/*" onChange={(e) => onUpdate({ ...data, licenseFront: e.target.files?.[0] || null })} style={{ width: "100%", padding: 12, border: "2px dashed #d1d5db", borderRadius: 8 }} />
+        <input type="file" accept="image/*" onChange={(e) => onUpdate({ ...data, licenseFront: e.target.files?.[0] || null })} style={fileInputStyle(!!errors.licenseFront)} />
+        {data.licenseFront && <p style={{ fontSize: 12, color: "#16a34a", marginTop: 6 }}>✓ {data.licenseFront.name}</p>}
+        <ErrorText message={errors.licenseFront} />
       </div>
 
       <div style={{ marginBottom: 24 }}>
         <Label required>Driver's License (Back)</Label>
-        <input type="file" accept="image/*" onChange={(e) => onUpdate({ ...data, licenseBack: e.target.files?.[0] || null })} style={{ width: "100%", padding: 12, border: "2px dashed #d1d5db", borderRadius: 8 }} />
+        <input type="file" accept="image/*" onChange={(e) => onUpdate({ ...data, licenseBack: e.target.files?.[0] || null })} style={fileInputStyle(!!errors.licenseBack)} />
+        {data.licenseBack && <p style={{ fontSize: 12, color: "#16a34a", marginTop: 6 }}>✓ {data.licenseBack.name}</p>}
+        <ErrorText message={errors.licenseBack} />
       </div>
 
       <div style={{ marginBottom: 8, paddingTop: 8, borderTop: "1px solid #e5e7eb" }}>
@@ -184,7 +247,9 @@ function StepDocuments({ data, onUpdate }: any) {
 
       <div style={{ marginBottom: 24, marginTop: 16 }}>
         <Label required>Insurance Certificate</Label>
-        <input type="file" accept="image/*,.pdf" onChange={(e) => onUpdate({ ...data, insurance: e.target.files?.[0] || null })} style={{ width: "100%", padding: 12, border: "2px dashed #d1d5db", borderRadius: 8 }} />
+        <input type="file" accept="image/*,.pdf" onChange={(e) => onUpdate({ ...data, insurance: e.target.files?.[0] || null })} style={fileInputStyle(!!errors.insurance)} />
+        {data.insurance && <p style={{ fontSize: 12, color: "#16a34a", marginTop: 6 }}>✓ {data.insurance.name}</p>}
+        <ErrorText message={errors.insurance} />
       </div>
 
       <div style={{ marginBottom: 24 }}>
@@ -217,7 +282,7 @@ function StepDocuments({ data, onUpdate }: any) {
   );
 }
 
-function StepRoutes({ data, onUpdate }: any) {
+function StepRoutes({ data, onUpdate, errors }: any) {
   const swapRoute = () => {
     onUpdate({ ...data, primaryFrom: data.primaryTo || "", primaryTo: data.primaryFrom || "" });
   };
@@ -231,22 +296,25 @@ function StepRoutes({ data, onUpdate }: any) {
 
       <div style={{ marginBottom: 24 }}>
         <Label required>Primary Route</Label>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10 }}>
-          <div style={{ flex: 1, position: "relative" }}>
-            <span style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", fontSize: 15, color: "#3b82f6" }}>📍</span>
-            <input
-              placeholder="From city"
-              value={data.primaryFrom || ""}
-              onChange={(e: any) => onUpdate({ ...data, primaryFrom: e.target.value })}
-              style={{
-                width: "100%",
-                padding: "12px 16px 12px 38px",
-                border: "1px solid #d1d5db",
-                borderRadius: 8,
-                fontSize: 16,
-                background: "white",
-              }}
-            />
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 8, marginTop: 10 }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ position: "relative" }}>
+              <span style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", fontSize: 15, color: "#3b82f6" }}>📍</span>
+              <input
+                placeholder="From city"
+                value={data.primaryFrom || ""}
+                onChange={(e: any) => onUpdate({ ...data, primaryFrom: e.target.value })}
+                style={{
+                  width: "100%",
+                  padding: "12px 16px 12px 38px",
+                  border: errors.primaryFrom ? "1.5px solid #ef4444" : "1px solid #d1d5db",
+                  borderRadius: 8,
+                  fontSize: 16,
+                  background: errors.primaryFrom ? "#fef2f2" : "white",
+                }}
+              />
+            </div>
+            <ErrorText message={errors.primaryFrom} />
           </div>
 
           <button
@@ -266,26 +334,30 @@ function StepRoutes({ data, onUpdate }: any) {
               fontSize: 15,
               flexShrink: 0,
               color: "#3b82f6",
+              marginTop: 2,
             }}
           >
             ⇄
           </button>
 
-          <div style={{ flex: 1, position: "relative" }}>
-            <span style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", fontSize: 15, color: "#10b981" }}>📍</span>
-            <input
-              placeholder="To city"
-              value={data.primaryTo || ""}
-              onChange={(e: any) => onUpdate({ ...data, primaryTo: e.target.value })}
-              style={{
-                width: "100%",
-                padding: "12px 16px 12px 38px",
-                border: "1px solid #d1d5db",
-                borderRadius: 8,
-                fontSize: 16,
-                background: "white",
-              }}
-            />
+          <div style={{ flex: 1 }}>
+            <div style={{ position: "relative" }}>
+              <span style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", fontSize: 15, color: "#10b981" }}>📍</span>
+              <input
+                placeholder="To city"
+                value={data.primaryTo || ""}
+                onChange={(e: any) => onUpdate({ ...data, primaryTo: e.target.value })}
+                style={{
+                  width: "100%",
+                  padding: "12px 16px 12px 38px",
+                  border: errors.primaryTo ? "1.5px solid #ef4444" : "1px solid #d1d5db",
+                  borderRadius: 8,
+                  fontSize: 16,
+                  background: errors.primaryTo ? "#fef2f2" : "white",
+                }}
+              />
+            </div>
+            <ErrorText message={errors.primaryTo} />
           </div>
         </div>
 
@@ -330,6 +402,7 @@ export default function DriverOnboarding() {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(0);
   const [formData, setFormData] = useState<any>({});
+  const [stepErrors, setStepErrors] = useState<Record<string, string>>({});
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -342,8 +415,23 @@ export default function DriverOnboarding() {
     return () => unsubscribe();
   }, [router]);
 
+  const handleUpdate = (data: any) => {
+    setFormData(data);
+    // Clear errors for fields as they get filled in, so feedback feels responsive
+    if (Object.keys(stepErrors).length > 0) {
+      setStepErrors(validateStep(currentStep, data));
+    }
+  };
+
   const handleNext = async () => {
+    // Steps before "done" (index 5) must pass validation first
     if (currentStep < STEPS.length - 1) {
+      const errors = validateStep(currentStep, formData);
+      if (Object.keys(errors).length > 0) {
+        setStepErrors(errors);
+        return;
+      }
+      setStepErrors({});
       setCurrentStep(currentStep + 1);
       return;
     }
@@ -401,9 +489,13 @@ export default function DriverOnboarding() {
     }
   };
 
-  const handleBack = () => currentStep > 0 && setCurrentStep(currentStep - 1);
+  const handleBack = () => {
+    setStepErrors({});
+    if (currentStep > 0) setCurrentStep(currentStep - 1);
+  };
 
   const CurrentStepComponent = [StepAccount, StepCompany, StepTruck, StepDocuments, StepRoutes, StepDone][currentStep];
+  const hasErrors = Object.keys(stepErrors).length > 0;
 
   return (
     <div style={{ minHeight: "100vh", background: "#f8fafc", padding: "40px 20px" }}>
@@ -482,11 +574,31 @@ export default function DriverOnboarding() {
         </div>
 
         <div style={{ padding: "40px 32px" }}>
-          <CurrentStepComponent data={formData} onUpdate={setFormData} />
+          {hasErrors && (
+            <div
+              style={{
+                maxWidth: 500,
+                margin: "0 auto 24px",
+                padding: "12px 16px",
+                background: "#fef2f2",
+                border: "1px solid #fecaca",
+                borderRadius: 8,
+                fontSize: 13,
+                color: "#b91c1c",
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+              }}
+            >
+              <span>⚠️</span>
+              <span>Please fill in the required fields highlighted below before continuing.</span>
+            </div>
+          )}
+          <CurrentStepComponent data={formData} onUpdate={handleUpdate} errors={stepErrors} />
         </div>
 
         <div style={{ padding: "24px 32px", display: "flex", justifyContent: "space-between", borderTop: "1px solid #e2e8f0" }}>
-          <button onClick={handleBack} disabled={currentStep === 0 || loading} style={{ padding: "12px 28px", border: "1px solid #d1d5db", borderRadius: 8 }}>
+          <button onClick={handleBack} disabled={currentStep === 0 || loading} style={{ padding: "12px 28px", border: "1px solid #d1d5db", borderRadius: 8, background: "white" }}>
             Back
           </button>
           <button 
