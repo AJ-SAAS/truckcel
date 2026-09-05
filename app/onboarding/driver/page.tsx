@@ -7,6 +7,7 @@ import { auth, db } from "@/lib/firebase";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 import { uploadDriverFile } from "@/lib/uploadDriverFile";
+import LocationAutocomplete from "@/components/LocationAutocomplete";
 
 const STEPS = [
   { id: "account", title: "Account Setup", desc: "Basic information" },
@@ -284,7 +285,15 @@ function StepDocuments({ data, onUpdate, errors }: any) {
 
 function StepRoutes({ data, onUpdate, errors }: any) {
   const swapRoute = () => {
-    onUpdate({ ...data, primaryFrom: data.primaryTo || "", primaryTo: data.primaryFrom || "" });
+    onUpdate({
+      ...data,
+      primaryFrom: data.primaryTo || "",
+      primaryFromLat: data.primaryToLat,
+      primaryFromLng: data.primaryToLng,
+      primaryTo: data.primaryFrom || "",
+      primaryToLat: data.primaryFromLat,
+      primaryToLng: data.primaryFromLng,
+    });
   };
 
   return (
@@ -298,22 +307,20 @@ function StepRoutes({ data, onUpdate, errors }: any) {
         <Label required>Primary Route</Label>
         <div style={{ display: "flex", alignItems: "flex-start", gap: 8, marginTop: 10 }}>
           <div style={{ flex: 1 }}>
-            <div style={{ position: "relative" }}>
-              <span style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", fontSize: 15, color: "#3b82f6" }}>📍</span>
-              <input
-                placeholder="From city"
-                value={data.primaryFrom || ""}
-                onChange={(e: any) => onUpdate({ ...data, primaryFrom: e.target.value })}
-                style={{
-                  width: "100%",
-                  padding: "12px 16px 12px 38px",
-                  border: errors.primaryFrom ? "1.5px solid #ef4444" : "1px solid #d1d5db",
-                  borderRadius: 8,
-                  fontSize: 16,
-                  background: errors.primaryFrom ? "#fef2f2" : "white",
-                }}
-              />
-            </div>
+            <LocationAutocomplete
+              placeholder="From city"
+              value={data.primaryFrom || ""}
+              pinColor="#3b82f6"
+              hasError={!!errors.primaryFrom}
+              onSelect={(loc) =>
+                onUpdate({
+                  ...data,
+                  primaryFrom: `${loc.city}, ${loc.country}`,
+                  primaryFromLat: loc.lat,
+                  primaryFromLng: loc.lng,
+                })
+              }
+            />
             <ErrorText message={errors.primaryFrom} />
           </div>
 
@@ -341,22 +348,20 @@ function StepRoutes({ data, onUpdate, errors }: any) {
           </button>
 
           <div style={{ flex: 1 }}>
-            <div style={{ position: "relative" }}>
-              <span style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", fontSize: 15, color: "#10b981" }}>📍</span>
-              <input
-                placeholder="To city"
-                value={data.primaryTo || ""}
-                onChange={(e: any) => onUpdate({ ...data, primaryTo: e.target.value })}
-                style={{
-                  width: "100%",
-                  padding: "12px 16px 12px 38px",
-                  border: errors.primaryTo ? "1.5px solid #ef4444" : "1px solid #d1d5db",
-                  borderRadius: 8,
-                  fontSize: 16,
-                  background: errors.primaryTo ? "#fef2f2" : "white",
-                }}
-              />
-            </div>
+            <LocationAutocomplete
+              placeholder="To city"
+              value={data.primaryTo || ""}
+              pinColor="#10b981"
+              hasError={!!errors.primaryTo}
+              onSelect={(loc) =>
+                onUpdate({
+                  ...data,
+                  primaryTo: `${loc.city}, ${loc.country}`,
+                  primaryToLat: loc.lat,
+                  primaryToLng: loc.lng,
+                })
+              }
+            />
             <ErrorText message={errors.primaryTo} />
           </div>
         </div>
@@ -455,7 +460,11 @@ export default function DriverOnboarding() {
         licensePlate: formData.licensePlate,
         capacityKg: Number(formData.capacity) || 0,
         primaryFrom: formData.primaryFrom,
+        primaryFromLat: formData.primaryFromLat ?? null,
+        primaryFromLng: formData.primaryFromLng ?? null,
         primaryTo: formData.primaryTo,
+        primaryToLat: formData.primaryToLat ?? null,
+        primaryToLng: formData.primaryToLng ?? null,
         insuranceProvider: formData.insuranceProvider || "",
         insurancePolicyNumber: formData.insurancePolicyNumber || "",
         cargoInsured: !!formData.cargoInsured,
